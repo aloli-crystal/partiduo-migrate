@@ -27,6 +27,13 @@ le vérifie (`spec/architecture/boundary_spec.cr`).
 Chaque reprise produit un rapport, en AsciiDoc et en CSV, qui compare les
 chiffres de la source (« avant ») à ceux relus dans l'instance (« après ») :
 
+* contrôle de lecture de la source : la source est relue *indépendamment*
+  du modèle que la reprise écrit (FEC totalisé pendant la lecture sur les
+  montants bruts de chaque ligne ; base NOALYSS relue par des requêtes
+  d'agrégat sur `jrnx`, comme la balance de NOALYSS) et comparée à ce
+  modèle, par compte, journal et mois — une erreur de lecture (ligne
+  perdue, dédoublée, mal soldée) est un écart ;
+
 * balance générale (lignes, débit, crédit, solde par compte) ;
 * balance âgée des tiers (non échu, 1 à 30 jours, 31 à 60, plus de 60, reste
   dû), avec les règles du relevé de l'instance : lignes non lettrées et
@@ -50,11 +57,18 @@ Fichiers écrits dans le dossier `--report` :
 |`balance-generale.csv` |par compte : avant, après, statut
 |`balance-agee.csv` |par fiche de tiers : tranches avant, après, statut
 |`journaux.csv`, `periodes.csv` |totaux par journal et par mois
+|`lecture-source.csv` |contrôle de lecture : source relue face au modèle, par compte, journal et mois
 |`ecarts.csv` |chaque valeur en écart (vide si la reprise réconcilie)
 |`anomalies.csv` |refus de l'instance, bloquants ou non
-|`correspondances.csv` |identifiants changés (comptes normalisés, codes de journal, quick codes, pièces rendues uniques)
-|`non-repris.csv` |analytique, pièces supplémentaires, pièces sans écriture
+|`correspondances.csv` |identifiants changés (comptes normalisés, codes de journal et de taux de TVA, quick codes, pièces rendues uniques)
+|`non-repris.csv` |analytique, pièces supplémentaires, pièces sans écriture, montants en devise
 |===
+
+Rapport et messages sont dans la langue choisie par `--locale` (`fr`, `en`,
+`nl` ; défaut `fr`, traductions dans `config/locales`) ; les noms de
+fichiers ne changent pas. Les cellules de texte des CSV qui commencent par
+`=`, `+`, `-` ou `@` sont précédées d'une apostrophe (pas d'interprétation
+en formule par un tableur).
 
 == Installation
 
@@ -102,15 +116,24 @@ bin/partiduo-migrate export-fec --noalyss 'postgres:///dossier_noalyss?host=/tmp
 ----
 
 Codes de sortie : `0` reprise réussie et réconciliée ; `1` échec (écart,
-anomalie bloquante, instance non neuve) ; `2` source illisible, FEC non
-conforme ou usage incorrect.
+anomalie bloquante, instance non neuve, erreur interne — le rapport est
+écrit dans tous les cas) ; `2` source illisible, FEC non conforme ou usage
+incorrect. La base NOALYSS se joint par socket Unix
+(`postgres:///base?host=/tmp`) ; une autre URL est acceptée avec un
+avertissement, et les messages n'en montrent jamais l'utilisateur ni le mot
+de passe.
 
 === Lecture du FEC
 
 * Séparateur : tabulation ou barre verticale, reconnu sur l'en-tête.
-* Encodage : BOM UTF-8 ou UTF-16, UTF-8 valide, sinon ISO 8859-15 ;
+* Encodage : BOM UTF-8 ou UTF-16, UTF-8 valide, sinon ISO 8859-15 — ou
+  Windows-1252 si l'ISO 8859-15 donne des caractères de contrôle C1 (€,
+  apostrophes typographiques), avec un avertissement si le doute subsiste ;
   `--encoding` l'impose (`utf-8`, `iso-8859-15`, `windows-1252`…).
 * Zones : les dix-huit de l'arrêté, par leur nom (casse indifférente) ;
+  une ligne qui n'a pas autant de zones que l'en-tête est refusée (un
+  séparateur dans un libellé décalerait les montants), un séparateur
+  terminal annoncé par l'en-tête est toléré ;
   `Montant` + `Sens` accepté à la place de `Debit` / `Credit` ;
   `Montantdevise` / `Idevise` facultatives ; une zone d'échéance
   (`DateEcheance`) est reprise si elle existe.
@@ -124,24 +147,36 @@ conforme ou usage incorrect.
 === Ce que la reprise crée
 
 * Comptes absents du plan de l'instance (type de la source NOALYSS, sinon
-  déduit de la classe) ; un compte existant mouvementé mais non utilisable en
-  saisie est rendu utilisable.
+  le plus précis du compte parent de l'instance et d'une table de préfixes
+  du plan comptable général : 4456 et 486 à l'actif, 519 au passif…) ; un
+  compte existant mouvementé mais non utilisable en saisie est rendu
+  utilisable.
 * Exercices de douze mois couvrant les écritures (premier mois :
   `--fiscal-start`, sinon le mois suivant la date de clôture du nom du FEC,
-  sinon janvier), ou ceux de la base NOALYSS ; ses périodes closes sont
-  fermées après la reprise.
+  sinon janvier), ou ceux de la base NOALYSS (exercices décalés, de plus de
+  douze mois, période de clôture d'un jour comprise) complétés au besoin
+  par des exercices alignés sur eux ; une période n'est fermée après la
+  reprise que si toutes les périodes NOALYSS qu'elle recouvre sont closes.
+* Taux de TVA NOALYSS : code nettoyé (5 caractères) ; un taux du jeu
+  initial n'est mis à jour que s'il a le même taux, sinon un code suffixé
+  est créé (`INT2`), de même pour deux codes source qui se confondent.
 * Fiches : complètes depuis NOALYSS (catégorie selon le modèle de fiche,
   colonnes typées, autres attributs en attributs propres `noalyss_<ad_id>`),
   minimales depuis les comptes auxiliaires du FEC (catégorie selon le
   compte : 40 fournisseur, 41 client…), rattachées à leur compte.
 * Journaux : ceux de l'instance de même code sont réutilisés ; les autres
   sont créés (nature de NOALYSS, sinon déduite des écritures ; un journal
-  financier reçoit sa fiche Banque).
+  financier reçoit sa fiche Banque). Deux journaux source dont les codes
+  nettoyés se confondent (`BQ-1`, `BQ1`) restent distincts (`BQ1`, `BQ12`).
 * Écritures par `Partiduo::Api::Accounting.post_entry`, pièce de la source
   (rendue unique dans le journal au besoin), référence `fec:<journal>:<numéro>`
   ou `noalyss:<jr_id>`, échéance et pièce jointe.
 * Lettrages par `match_lines`, un par compte et code de lettrage (partiel si
-  débit ≠ crédit).
+  débit ≠ crédit ; un code réutilisé d'un compte auxiliaire à l'autre forme
+  un lettrage par tiers).
+* Relu mais non repris, et signalé au rapport : montants en devise
+  (`Montantdevise`/`Idevise`, `operation_currency`), dates de lettrage et de
+  pièce.
 
 == Démonstration
 

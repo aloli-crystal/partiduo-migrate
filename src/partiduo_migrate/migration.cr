@@ -6,7 +6,9 @@ module PartiduoMigrate
   # une reprise qui ne réconcilie pas au centime, ou qui laisse une
   # anomalie bloquante, est annulée et l'instance reste neuve (ADR-001 D5 :
   # « un échec, pas un avertissement »). En essai à blanc, elle est annulée
-  # dans tous les cas.
+  # dans tous les cas. Une exception (refus d'accès, fiche introuvable,
+  # erreur SQL) annule la transaction et devient une anomalie bloquante
+  # « interne » : le rapport est écrit, la commande sort en échec.
   class Migration
     getter dataset : Source::Dataset
     getter as_of : Time
@@ -55,11 +57,11 @@ module PartiduoMigrate
     def failure_reason : String
       reasons = [] of String
       blocking = problems.count { |problem| problem.blocking || @strict }
-      reasons << "#{blocking} anomalie(s) de reprise" if blocking > 0
+      reasons << PartiduoMigrate.t("migration.problems", total: blocking) if blocking > 0
       if comparison = @comparison
-        reasons << "#{comparison.failures.size} ligne(s) en écart" unless comparison.ok?
+        reasons << PartiduoMigrate.t("migration.differences", total: comparison.failures.size) unless comparison.ok?
       else
-        reasons << "réconciliation non faite"
+        reasons << PartiduoMigrate.t("migration.not_reconciled")
       end
       reasons.join(", ")
     end
@@ -75,7 +77,7 @@ module PartiduoMigrate
         @importer.run
         before = Reconciliation.before(@dataset, @importer.mapping, @as_of)
         after = Reconciliation.after(@as_of, @actor)
-        @comparison = Reconciliation::Comparison.new(before, after, @as_of)
+        @comparison = Reconciliation::Comparison.new(before, after, @as_of, Reconciliation.reading(@dataset))
         if success? && !@dry_run
           Partiduo::Api::Result(Nil).success(nil)
         else
@@ -84,14 +86,22 @@ module PartiduoMigrate
       end
       @committed = result.success?
       success?
+    rescue ex
+      # La transaction est déjà annulée (`Transaction.run` relance après
+      # l'annulation) : l'exception devient une anomalie bloquante.
+      @committed = false
+      @preconditions << Importer::Problem.new("internal", ex.class.name,
+        PartiduoMigrate.t("migration.exception", message: ex.message || ex.class.name))
+      false
     end
 
     private def describe_instance : String
       database = Marten.settings.databases.first.name.to_s
       settings = Partiduo::Api::Core.settings(@actor)
-      "#{settings.company_name} (#{settings.domain}, base #{database}, régime #{settings.tax_regime})"
+      PartiduoMigrate.t("migration.instance", company: settings.company_name, domain: settings.domain,
+        database: database, regime: settings.tax_regime)
     rescue Partiduo::Api::NotFound
-      "base #{Marten.settings.databases.first.name}"
+      PartiduoMigrate.t("migration.instance_database", database: Marten.settings.databases.first.name.to_s)
     end
   end
 end

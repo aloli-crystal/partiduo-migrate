@@ -27,7 +27,7 @@ describe "Reprise d'un FEC" do
     comparison.after.accounts["510001"].balance.should eq(BigDecimal.new("-33987.00"))
     comparison.after.journals.keys.sort!.should eq(%w[A01 F01 O01 V01])
     comparison.after.periods.size.should eq(12)
-    migration.counts["lettrages"].should eq(43)
+    migration.counts["matchings"].should eq(43)
 
     # Balance âgée au 31 décembre 2024 : facture de décembre non échue… sans
     # échéance dans le FEC, référence = date ; créance de 2023 à plus de
@@ -64,14 +64,14 @@ describe "Reprise d'un FEC" do
     dir = PartiduoMigrate::SpecSupport.report_dir
     files = PartiduoMigrate::Report.new(dir, migration).write
     files.map { |path| File.basename(path) }.sort!.should eq(%w[anomalies.csv balance-agee.csv balance-generale.csv
-      correspondances.csv ecarts.csv journaux.csv non-repris.csv periodes.csv rapport.adoc])
+      correspondances.csv ecarts.csv journaux.csv lecture-source.csv non-repris.csv periodes.csv rapport.adoc])
     report = File.read(File.join(dir, "rapport.adoc"))
     report.should contain("*RÉUSSIE*")
     report.should contain("== Balance générale")
     report.should contain("== Balance âgée des tiers")
     report.should contain("|V01 |19 |36444,25 |36444,25 |19 |36444,25 |36444,25 |ok")
     rows = CSV.parse(File.read(File.join(dir, "balance-generale.csv")))
-    rows.first.first(3).should eq(["compte", "libellé", "lignes/écritures avant"])
+    rows.first.first(3).should eq(["compte", "libellé", "lignes avant"])
     rows.find! { |row| row[0] == "510001" }.last.should eq("ok")
     CSV.parse(File.read(File.join(dir, "ecarts.csv"))).size.should eq(1)
   ensure
@@ -126,7 +126,7 @@ describe "Reprise d'un FEC" do
     migration = PartiduoMigrate::Migration.new(dataset)
     migration.run.should be_false
     migration.committed?.should be_false
-    problem = migration.problems.find! { |candidate| candidate.step == "lettrage" }
+    problem = migration.problems.find! { |candidate| candidate.step == "matching" }
     problem.blocking.should be_true
     problem.reference.should contain("ZZ")
     migration.failure_reason.should contain("1 anomalie(s) de reprise")

@@ -2,14 +2,16 @@
 
 module PartiduoMigrate
   # Correspondances source → instance établies pendant la reprise : comptes,
-  # journaux, fiches, lignes d'écritures. La réconciliation compare les
-  # chiffres de la source *traduits* par ces correspondances à ceux relus
-  # dans l'instance ; le rapport les publie.
+  # journaux, fiches, taux de TVA, lignes d'écritures. La réconciliation
+  # compare les chiffres de la source *traduits* par ces correspondances à
+  # ceux relus dans l'instance ; le rapport les publie.
   class Mapping
     getter accounts = {} of String => String
     getter journals = {} of String => String
     getter ledger_ids = {} of String => Int64
     getter cards = {} of String => String
+    # Code NOALYSS du taux (`tva_rate.tva_code`) → code du taux de l'instance.
+    getter vat_rates = {} of String => String
     # Ligne source (`{écriture, rang}`) → identifiant de la ligne créée.
     getter lines = {} of {Int32, Int32} => Int64
     # Pièces renommées : `{journal, pièce source, pièce retenue}`.
@@ -27,13 +29,17 @@ module PartiduoMigrate
       code.try { |value| cards[value]? || value }
     end
 
-    # Correspondances qui changent l'identifiant (pour le rapport).
+    # Correspondances qui changent l'identifiant (pour le rapport) : nature
+    # (traduite), source, instance.
     def renamed : Array({String, String, String})
       rows = [] of {String, String, String}
-      accounts.each { |source, target| rows << {"compte", source, target} if source != target }
-      journals.each { |source, target| rows << {"journal", source, target} if source != target }
-      cards.each { |source, target| rows << {"fiche", source, target} if source != target }
-      receipts.each { |(journal, source, target)| rows << {"pièce #{journal}", source, target} }
+      {"account" => accounts, "journal" => journals, "card" => cards, "vat_rate" => vat_rates}.each do |kind, pairs|
+        label = PartiduoMigrate.t("mapping.#{kind}")
+        pairs.each { |source, target| rows << {label, source, target} if source != target }
+      end
+      receipts.each do |(journal, source, target)|
+        rows << {PartiduoMigrate.t("mapping.receipt", journal: journal), source, target}
+      end
       rows
     end
   end

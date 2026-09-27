@@ -10,10 +10,13 @@ module PartiduoMigrate
   # rapprochées par journal, date et pièce.
   module Complement
     def self.merge(fec : Source::Dataset, noalyss : Source::Dataset) : Source::Dataset
-      dataset = Source::Dataset.new("#{fec.description}, complété par la #{noalyss.description}")
+      dataset = Source::Dataset.new(PartiduoMigrate.t("source.completed_description", fec: fec.description,
+        noalyss: noalyss.description))
       dataset.file_name = fec.file_name
       dataset.full_chart = true
       dataset.zero_lines = fec.zero_lines
+      # Écritures du FEC : contrôle de lecture du FEC.
+      dataset.control = fec.control
       fec.entries.each { |entry| dataset.entries << entry }
       noalyss.accounts.each { |number, account| dataset.accounts[number] = account }
       fec.accounts.each { |number, account| dataset.accounts[number] ||= account }
@@ -39,8 +42,8 @@ module PartiduoMigrate
       end
       noalyss.entries.each do |entry|
         next if entry.attachment.nil? || used.includes?(entry.origin || 0_i64)
-        dataset.unported << Source::Unported.new("pièce jointe", entry.reference,
-          "#{entry.attachment.try(&.filename)} : écriture absente du FEC")
+        dataset.unported << Source::Unported.new("orphan_attachment", entry.reference,
+          PartiduoMigrate.t("source.orphan_attachment_detail", file: entry.attachment.try(&.filename).to_s))
       end
       dataset
     end

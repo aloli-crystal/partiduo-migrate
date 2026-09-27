@@ -21,8 +21,8 @@ describe "Reprise d'une base NOALYSS" do
     migration.problems.select(&.blocking).should be_empty
     migration.comparison.present!.ok?.should be_true
     Partiduo::Api::Accounting.count_entries(actor).should eq(133)
-    migration.counts["pièces jointes"].should eq(14)
-    migration.counts["lettrages"].should eq(43)
+    migration.counts["attachments"].should eq(14)
+    migration.counts["matchings"].should eq(43)
 
     # Fiche complète : adresse, SIREN, numéro de TVA, contact.
     card = Partiduo::Api::Cards.card_by_code(actor, "AUBEPINE").present!
@@ -59,8 +59,8 @@ describe "Reprise d'une base NOALYSS" do
     ageing.not_due.should eq(BigDecimal.new("3600.00"))
 
     # Analytique relevée, non reprise (pas encore de contrat).
-    dataset.unported.count(&.kind.==("analytique")).should eq(18)
-    dataset.unported.count(&.kind.==("poste analytique")).should eq(3)
+    dataset.unported.count(&.kind.==("analytic")).should eq(18)
+    dataset.unported.count(&.kind.==("analytic_post")).should eq(3)
 
     # Les utilisateurs de NOALYSS ne sont jamais repris.
     Partiduo::Api::Auth.users(actor).should be_empty
@@ -72,7 +72,7 @@ describe "Reprise d'une base NOALYSS" do
     dataset = PartiduoMigrate::Complement.merge(demo_dataset, noalyss)
     migration = PartiduoMigrate::Migration.new(dataset)
     migration.run.should be_true
-    migration.counts["pièces jointes"].should eq(14)
+    migration.counts["attachments"].should eq(14)
     entry = Partiduo::Api::Accounting.entries(actor, Partiduo::Api::Accounting::EntryQuery.new(receipt: "V24-0004")).first
     entry.source.should start_with("fec:")
     entry.attachment_id.should_not be_nil

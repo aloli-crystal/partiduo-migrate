@@ -20,8 +20,11 @@ module PartiduoMigrate
     # sont jamais lus (ADR-001 D5, ADR-002).
     class Database
       getter url : String
+      # Avertissements de connexion (URL hors socket Unix).
+      getter warnings = [] of String
 
       def initialize(@url : String)
+        @warnings << PartiduoMigrate.t("noalyss.not_unix_socket", url: safe_url) unless unix_socket?
       end
 
       def read(with_attachments : Bool = true) : Source::Dataset
@@ -30,11 +33,15 @@ module PartiduoMigrate
           db.exec("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY")
           version = db.query_one("SELECT max(val) FROM version", as: Int32?)
           unless version == DBVERSION
-            raise Error.new("base NOALYSS en DBVERSION #{version.inspect}, #{DBVERSION} attendue : " \
-                            "mettez-la d'abord à jour avec NOALYSS")
+            raise Error.new(PartiduoMigrate.t("noalyss.wrong_version", version: version.inspect, expected: DBVERSION))
           end
           name = parameter(db, "MY_NAME")
-          dataset = Source::Dataset.new("Base NOALYSS #{database_name}#{name ? " (#{name})" : ""}")
+          description = if name
+                          PartiduoMigrate.t("source.noalyss_description_named", database: database_name, name: name)
+                        else
+                          PartiduoMigrate.t("source.noalyss_description", database: database_name)
+                        end
+          dataset = Source::Dataset.new(description)
           dataset.full_chart = true
           read_accounts(db, dataset)
           read_journals(db, dataset)
@@ -43,12 +50,13 @@ module PartiduoMigrate
           read_vat(db, dataset)
           read_fiscal_years(db, dataset)
           read_entries(db, dataset)
+          read_control(db, dataset)
           read_attachments(db, dataset) if with_attachments
           read_unported(db, dataset)
           dataset
         end
       rescue ex : DB::ConnectionRefused | Socket::Error | PQ::PQError
-        raise Error.new("base NOALYSS illisible (#{@url}) : #{ex.message}")
+        raise Error.new(PartiduoMigrate.t("noalyss.unreadable", url: safe_url, message: ex.message.to_s))
       end
 
       # SIREN du dossier (paramètre `MY_SIREN`, sinon tiré du numéro de TVA
@@ -58,12 +66,41 @@ module PartiduoMigrate
           parameter(db, "MY_SIREN").try(&.gsub(/\D/, "")).presence ||
             parameter(db, "MY_TVA").try { |vat| vat.gsub(/\s/, "").match(/\AFR\w{2}(\d{9})\z/i).try(&.[1]) }
         end
+      rescue ex : DB::ConnectionRefused | Socket::Error | PQ::PQError
+        raise Error.new(PartiduoMigrate.t("noalyss.unreadable", url: safe_url, message: ex.message.to_s))
+      end
+
+      # URL sans utilisateur ni mot de passe (dans l'autorité ou en
+      # paramètre), pour les messages et le rapport.
+      def safe_url : String
+        uri = URI.parse(@url)
+        uri.user = nil
+        uri.password = nil
+        if query = uri.query
+          params = URI::Params.parse(query)
+          %w[password user].each { |key| params.delete_all(key) }
+          uri.query = params.empty? ? nil : params.to_s
+        end
+        uri.to_s
+      rescue URI::Error
+        database_name
+      end
+
+      # Connexion par socket Unix (`host=/chemin` ou hôte vide), comme le
+      # prévoit l'exploitation de Partiduo.
+      def unix_socket? : Bool
+        uri = URI.parse(@url)
+        host = uri.query.try { |query| URI::Params.parse(query)["host"]? }
+        return host.starts_with?('/') if host
+        uri.host.nil? || uri.host.try(&.empty?) || uri.host.try(&.starts_with?('/')) || false
+      rescue URI::Error
+        false
       end
 
       private def database_name : String
         URI.parse(@url).path.lchop('/')
       rescue URI::Error
-        @url
+        "?"
       end
 
       private def parameter(db : DB::Connection, id : String) : String?
@@ -152,20 +189,27 @@ module PartiduoMigrate
         end
       end
 
+      # Exercices et leurs périodes (`parm_periode`), dans l'ordre des dates.
       private def read_fiscal_years(db, dataset) : Nil
-        sql = <<-SQL
-          SELECT p_exercice, max(p_exercice_label), min(p_start), max(p_end),
-                 array_agg(p_start ORDER BY p_start) FILTER (WHERE p_closed)
-          FROM parm_periode GROUP BY p_exercice ORDER BY min(p_start)
-          SQL
+        years = [] of {String, String, Array(Source::Period)}
+        sql = "SELECT p_exercice, coalesce(p_exercice_label, p_exercice), p_start, p_end, coalesce(p_closed, false) " \
+              "FROM parm_periode ORDER BY p_start, p_end"
         db.query_each(sql) do |result|
-          result.read(String)
+          id = result.read(String)
           label = result.read(String)
-          starts = result.read(Time)
-          ends = result.read(Time)
-          closed = result.read(Array(Time)?) || [] of Time
+          period = Source::Period.new(result.read(Time), result.read(Time), result.read(Bool))
+          year = years.find { |candidate| candidate[0] == id }
+          if year
+            year[2] << period
+          else
+            years << {id, label, [period]}
+          end
+        end
+        years.each do |(_, label, periods)|
+          starts = periods.min_of(&.starts_on)
+          ends = periods.max_of(&.ends_on)
           months = (ends.year - starts.year) * 12 + ends.month - starts.month + 1
-          dataset.fiscal_years << Source::FiscalYear.new(label, starts, months, closed)
+          dataset.fiscal_years << Source::FiscalYear.new(label, starts, months, periods)
         end
       end
 
@@ -241,6 +285,37 @@ module PartiduoMigrate
         end
       end
 
+      # Contrôle de lecture : balance par compte, totaux par journal et par
+      # mois relus directement sur `jrnx` (modèle de `acc_balance.class.php`),
+      # sans passer par la requête des écritures : une ligne sans opération
+      # (`jrn`), une ligne dédoublée par une jointure ou un montant mal lu
+      # apparaissent en écart au rapport. Même règle que la lecture pour les
+      # montants négatifs (de l'autre côté) et les lignes nulles (ignorées).
+      CONTROL_SQL = <<-SQL
+        SELECT x.j_poste, coalesce(d.jrn_def_code, '#' || x.j_jrn_def::text), to_char(x.j_date, 'YYYY-MM'),
+               count(*),
+               coalesce(sum(CASE WHEN x.j_debit = (x.j_montant > 0) THEN abs(x.j_montant) ELSE 0 END), 0),
+               coalesce(sum(CASE WHEN x.j_debit <> (x.j_montant > 0) THEN abs(x.j_montant) ELSE 0 END), 0)
+        FROM jrnx x
+        LEFT JOIN jrn_def d ON d.jrn_def_id = x.j_jrn_def
+        WHERE x.j_montant <> 0
+        GROUP BY 1, 2, 3
+        SQL
+
+      private def read_control(db, dataset) : Nil
+        control = Source::Control.new(sides: true)
+        db.query_each(CONTROL_SQL) do |result|
+          account = result.read(String)
+          journal = result.read(String)
+          period = result.read(String)
+          count = result.read(Int64).to_i32
+          debit = result.read(PG::Numeric).to_big_d
+          credit = result.read(PG::Numeric).to_big_d
+          control.add(account, journal, period, Source::Tally.new(count, debit, credit))
+        end
+        dataset.control = control
+      end
+
       # Code de lettrage tiré de `jnt_letter.jl_id` (1 → `A`, 27 → `AA`).
       def self.letter_code(id : Int64) : String
         n = id
@@ -272,8 +347,8 @@ module PartiduoMigrate
         db.query_each("SELECT jr_id, js_filename, js_mimetype FROM jrn_sup_document ORDER BY js_id") do |result|
           jr_id = result.read(Int64)
           reference = by_origin[jr_id]?.try(&.reference) || "jr_id #{jr_id}"
-          dataset.unported << Source::Unported.new("pièce supplémentaire", reference,
-            "#{result.read(String)} (#{result.read(String)}) : une écriture Partiduo ne porte qu'une pièce jointe")
+          dataset.unported << Source::Unported.new("extra_attachment", reference,
+            PartiduoMigrate.t("source.extra_attachment_detail", file: result.read(String), type: result.read(String)))
         end
       end
 
@@ -298,15 +373,16 @@ module PartiduoMigrate
           internal = result.read(String)
           account = result.read(String)
           description = result.read(String)
-          dataset.unported << Source::Unported.new("analytique",
-            "#{internal.presence || "sans opération"} #{account}".strip,
-            "#{date.to_s("%Y-%m-%d")} #{plan}/#{post} #{debit ? "débit" : "crédit"} " \
-            "#{Fec.format_amount(amount)} #{description}".strip)
+          dataset.unported << Source::Unported.new("analytic",
+            "#{internal.presence || PartiduoMigrate.t("source.no_operation")} #{account}".strip,
+            PartiduoMigrate.t("source.analytic_detail", date: date.to_s("%Y-%m-%d"), plan: plan, post: post,
+              side: PartiduoMigrate.t(debit ? "source.debit" : "source.credit"),
+              amount: Fec.format_amount(amount), description: description).strip)
         end
         db.query_each("SELECT pa.pa_name, po.po_name, coalesce(po.po_description, '') FROM poste_analytique po " \
                       "JOIN plan_analytique pa ON pa.pa_id = po.pa_id ORDER BY pa.pa_name, po.po_name") do |result|
           plan = result.read(String)
-          dataset.unported << Source::Unported.new("poste analytique", "#{plan}/#{result.read(String)}", result.read(String))
+          dataset.unported << Source::Unported.new("analytic_post", "#{plan}/#{result.read(String)}", result.read(String))
         end
       end
     end

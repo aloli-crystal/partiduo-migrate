@@ -5,18 +5,24 @@ module PartiduoMigrate
     # Défaut d'un FEC : ligne du fichier (1 = en-tête), zone, message.
     record Problem, line : Int32, column : String, message : String do
       def to_s(io : IO) : Nil
-        io << "ligne " << line
-        io << ", " << column unless column.empty?
-        io << " : " << message
+        if column.empty?
+          io << PartiduoMigrate.t("fec.problem", line: line, message: message)
+        else
+          io << PartiduoMigrate.t("fec.problem_column", line: line, column: column, message: message)
+        end
       end
     end
 
     # Lecture d'un FEC en `Source::Dataset` : encodage et séparateur
     # reconnus, zones contrôlées ligne à ligne, lignes regroupées en
     # écritures par journal et numéro d'écriture. Les défauts sont réunis
-    # dans `problems` ; un fichier qui en a n'est pas importé.
+    # dans `problems` ; un fichier qui en a n'est pas importé. Les montants
+    # bruts de chaque ligne sont totalisés au fil de la lecture
+    # (`Source::Control`) pour le contrôle de lecture du rapport.
     class Reader
       getter problems = [] of Problem
+      # Avertissements qui n'empêchent pas la lecture (encodage douteux).
+      getter warnings = [] of String
       getter encoding = ""
       getter separator = '\t'
 
@@ -28,46 +34,65 @@ module PartiduoMigrate
       end
 
       def read(bytes : Bytes, name : String = "FEC") : Source::Dataset
-        dataset = Source::Dataset.new("FEC #{name}")
+        dataset = Source::Dataset.new(PartiduoMigrate.t("source.fec_description", name: name))
         dataset.file_name = name
+        control = Source::Control.new(sides: false)
+        dataset.control = control
         text, @encoding = Encoding.decode(bytes, @forced_encoding)
+        @warnings << PartiduoMigrate.t("fec.c1_characters", encoding: @encoding) if Encoding.c1?(text)
         lines = text.split(/\r\n|\n|\r/)
         while lines.last?.try(&.strip.empty?)
           lines.pop
         end
         header = lines.first?
         if header.nil? || header.strip.empty?
-          @problems << Problem.new(1, "", "fichier vide")
+          @problems << Problem.new(1, "", PartiduoMigrate.t("fec.empty_file"))
           return dataset
         end
         @separator = detect_separator(header) || return dataset
         columns = header.split(@separator).map { |value| unquote(value) }
+        # Séparateur terminal sur l'en-tête : toléré sur chaque ligne.
+        trailing = columns.size > 1 && columns.last.empty?
+        columns.pop if trailing
         index = column_index(columns) || return dataset
 
+        read_lines(dataset, control, lines, columns.size, index, trailing)
+        check_balance(dataset)
+        dataset
+      end
+
+      private def read_lines(dataset : Source::Dataset, control : Source::Control, lines : Array(String), size : Int32,
+                             index : Hash(String, Int32), trailing : Bool) : Nil
         by_key = {} of {String, String} => Source::Entry
         lines.each_with_index do |raw, position|
           next if position.zero? || raw.strip.empty?
           number = position + 1
           fields = raw.split(@separator).map { |value| unquote(value) }
-          if fields.size < columns.size
-            @problems << Problem.new(number, "", "#{fields.size} zones au lieu de #{columns.size}")
+          # Un séparateur terminal (annoncé par l'en-tête) donne une zone
+          # finale vide, tolérée ; toute autre zone en trop décale les
+          # suivantes (séparateur dans un libellé) : la ligne est refusée.
+          fields.pop if trailing && fields.size == size + 1 && fields.last.empty?
+          if fields.size != size
+            @problems << Problem.new(number, "", PartiduoMigrate.t("fec.field_count", total: fields.size, expected: size))
             next
           end
-          read_line(dataset, by_key, fields, index, number)
+          read_line(dataset, control, by_key, fields, index, number)
         end
+      end
+
+      private def check_balance(dataset : Source::Dataset) : Nil
         dataset.entries.each do |entry|
           next if entry.balanced?
           @problems << Problem.new(entry.lines.first?.try(&.row.to_i32) || 0, "EcritureNum",
-            "écriture #{entry.reference} déséquilibrée (débit #{Fec.format_amount(entry.total_debit)}, " \
-            "crédit #{Fec.format_amount(entry.total_credit)})")
+            PartiduoMigrate.t("fec.unbalanced", entry: entry.reference, debit: Fec.format_amount(entry.total_debit),
+              credit: Fec.format_amount(entry.total_credit)))
         end
-        dataset
       end
 
       private def detect_separator(header : String) : Char?
         return '\t' if header.includes?('\t')
         return '|' if header.includes?('|')
-        @problems << Problem.new(1, "", "séparateur non reconnu : tabulation ou barre verticale attendue")
+        @problems << Problem.new(1, "", PartiduoMigrate.t("fec.unknown_separator"))
         nil
       end
 
@@ -83,9 +108,9 @@ module PartiduoMigrate
         columns.each_with_index { |name, position| index[name.downcase] = position }
         missing = REQUIRED.reject { |name| index.has_key?(name.downcase) }
         unless (index.has_key?("debit") && index.has_key?("credit")) || (index.has_key?("montant") && index.has_key?("sens"))
-          missing << "Debit/Credit (ou Montant/Sens)"
+          missing << PartiduoMigrate.t("fec.amount_columns")
         end
-        missing.each { |name| @problems << Problem.new(1, name, "zone obligatoire absente") }
+        missing.each { |name| @problems << Problem.new(1, name, PartiduoMigrate.t("fec.missing_column")) }
         missing.empty? ? index : nil
       end
 
@@ -124,16 +149,22 @@ module PartiduoMigrate
         end
       end
 
-      private def read_line(dataset : Source::Dataset, by_key, values : Array(String), index : Hash(String, Int32),
-                            number : Int32) : Nil
+      private def read_line(dataset : Source::Dataset, control : Source::Control, by_key, values : Array(String),
+                            index : Hash(String, Int32), number : Int32) : Nil
         fields = Fields.new(values, index, number, @problems)
         %w[JournalCode EcritureNum CompteNum EcritureDate].each do |name|
-          @problems << Problem.new(number, name, "zone vide") if fields[name].empty?
+          @problems << Problem.new(number, name, PartiduoMigrate.t("fec.empty_field")) if fields[name].empty?
         end
         entry_date = fields.date("EcritureDate")
         fields.date("ValidDate")
-        line = build_line(fields, number) || return
+        line, raw_debit, raw_credit = build_line(fields, number) || return
         return if entry_date.nil? || {"JournalCode", "EcritureNum", "CompteNum"}.any? { |name| fields[name].empty? }
+        # Contrôle de lecture : montants bruts, avant le solde de la ligne ;
+        # une ligne sans effet (débit = crédit) est ignorée des deux côtés.
+        if raw_debit != raw_credit
+          control.add(fields["CompteNum"], fields["JournalCode"], Source::Control.period_key(entry_date),
+            Source::Tally.new.add(raw_debit, raw_credit))
+        end
         if line.zero?
           dataset.zero_lines += 1
           return
@@ -141,21 +172,30 @@ module PartiduoMigrate
         store(dataset, by_key, fields, entry_date, line)
       end
 
-      private def build_line(fields : Fields, number : Int32) : Source::Line?
+      # Ligne du modèle, et montants bruts de la zone (débit, crédit).
+      private def build_line(fields : Fields, number : Int32) : {Source::Line, BigDecimal, BigDecimal}?
         letter_date = fields.date("DateLet")
-        debit, credit = amounts(fields, number) || return
+        raw_debit, raw_credit = amounts(fields, number) || return
         currency_amount = nil
         unless (text = fields["Montantdevise"]).empty?
           currency_amount = Fec.parse_amount(text)
-          @problems << Problem.new(number, "Montantdevise", "montant illisible : #{text}") if currency_amount.nil?
+          if currency_amount.nil?
+            @problems << Problem.new(number, "Montantdevise", PartiduoMigrate.t("fec.unreadable_amount", value: text))
+          end
         end
+        # Débit et crédit sur la même ligne : leur solde (l'arrêté ne
+        # l'interdit pas, certains logiciels le produisent).
+        zero = BigDecimal.new(0)
+        net = raw_debit - raw_credit
+        debit, credit = net >= zero ? {net, zero} : {zero, -net}
         aux = fields["CompAuxNum"].presence
-        Source::Line.new(
+        line = Source::Line.new(
           account: fields["CompteNum"], account_label: fields["CompteLib"], aux: aux,
           aux_label: aux ? fields["CompAuxLib"] : nil, label: fields["EcritureLib"],
           debit: debit, credit: credit, letter: fields["EcritureLet"].presence, letter_date: letter_date,
           currency_amount: currency_amount, currency_code: fields["Idevise"].presence, row: number.to_i64,
         )
+        {line, raw_debit, raw_credit}
       end
 
       private def store(dataset : Source::Dataset, by_key, fields : Fields, entry_date : Time, line : Source::Line) : Nil
@@ -171,7 +211,8 @@ module PartiduoMigrate
         end
         if entry.date != entry_date
           @problems << Problem.new(fields.number, "EcritureDate",
-            "écriture #{entry.reference} : date #{Fec.format_date(entry_date)} différente de #{Fec.format_date(entry.date)}")
+            PartiduoMigrate.t("fec.date_mismatch", entry: entry.reference, date: Fec.format_date(entry_date),
+              expected: Fec.format_date(entry.date)))
         end
         entry.due_date ||= due_date
         entry.lines << line
@@ -180,36 +221,38 @@ module PartiduoMigrate
         line.aux.try { |code| dataset.parties[code] ||= fields["CompAuxLib"] }
       end
 
-      # Débit et crédit d'une ligne (zones `Debit` / `Credit`, ou `Montant`
-      # et `Sens`) ; un montant négatif passe de l'autre côté.
+      # Débit et crédit bruts d'une ligne (zones `Debit` / `Credit`, ou
+      # `Montant` et `Sens`), tels qu'écrits (négatifs compris) : le solde
+      # de la ligne les remet chacun de son côté.
       private def amounts(fields : Fields, number : Int32) : {BigDecimal, BigDecimal}?
         value = ->(name : String) { fields[name] }
         zero = BigDecimal.new(0)
         if fields.has?("Debit")
           debit = Fec.parse_amount(value.call("Debit"))
           credit = Fec.parse_amount(value.call("Credit"))
-          @problems << Problem.new(number, "Debit", "montant illisible : #{value.call("Debit")}") if debit.nil?
-          @problems << Problem.new(number, "Credit", "montant illisible : #{value.call("Credit")}") if credit.nil?
+          if debit.nil?
+            @problems << Problem.new(number, "Debit", PartiduoMigrate.t("fec.unreadable_amount", value: value.call("Debit")))
+          end
+          if credit.nil?
+            @problems << Problem.new(number, "Credit", PartiduoMigrate.t("fec.unreadable_amount", value: value.call("Credit")))
+          end
           return if debit.nil? || credit.nil?
         else
           amount = Fec.parse_amount(value.call("Montant"))
           sens = value.call("Sens").strip.upcase
           if amount.nil?
-            @problems << Problem.new(number, "Montant", "montant illisible : #{value.call("Montant")}")
+            @problems << Problem.new(number, "Montant", PartiduoMigrate.t("fec.unreadable_amount", value: value.call("Montant")))
             return
           end
           case sens
           when "D", "+1", "1" then debit, credit = amount, zero
           when "C", "-1"      then debit, credit = zero, amount
           else
-            @problems << Problem.new(number, "Sens", "sens illisible : #{sens}")
+            @problems << Problem.new(number, "Sens", PartiduoMigrate.t("fec.unreadable_direction", value: sens))
             return
           end
         end
-        # Débit et crédit sur la même ligne : leur solde (l'arrêté ne
-        # l'interdit pas, certains logiciels le produisent).
-        net = debit - credit
-        net >= zero ? {net, zero} : {zero, -net}
+        {debit, credit}
       end
     end
   end

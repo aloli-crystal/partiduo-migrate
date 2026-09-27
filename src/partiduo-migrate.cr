@@ -6,6 +6,7 @@ require "digest/sha256"
 require "partiduo"
 
 require "./partiduo_migrate/version"
+require "./partiduo_migrate/i18n"
 require "./partiduo_migrate/source"
 require "./partiduo_migrate/fec/format"
 require "./partiduo_migrate/fec/encoding"

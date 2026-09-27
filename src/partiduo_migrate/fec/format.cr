@@ -27,7 +27,12 @@ module PartiduoMigrate
     # normalisée, produite par certains logiciels).
     DUE_DATE_COLUMNS = %w[DateEcheance EcheanceDate DateEch]
 
-    SEPARATORS = {'\t' => "tabulation", '|' => "barre verticale"}
+    # Séparateurs admis et leur nom (clé `migrate.fec.separators.<nom>`).
+    SEPARATORS = {'\t' => "tab", '|' => "pipe"}
+
+    def self.separator_name(separator : Char) : String
+      SEPARATORS[separator]?.try { |name| PartiduoMigrate.t("fec.separators.#{name}") } || separator.to_s
+    end
 
     class Error < Exception
     end
@@ -71,11 +76,11 @@ module PartiduoMigrate
                          when /\A(\d{2})\/(\d{2})\/(\d{4})\z/
                            {$3.to_i, $2.to_i, $1.to_i}
                          else
-                           raise Error.new("date illisible : #{value}")
+                           raise Error.new(PartiduoMigrate.t("fec.unreadable_date", value: value))
                          end
       Time.utc(year, month, day)
     rescue ArgumentError
-      raise Error.new("date illisible : #{value}")
+      raise Error.new(PartiduoMigrate.t("fec.unreadable_date", value: value))
     end
 
     def self.format_date(time : Time?) : String

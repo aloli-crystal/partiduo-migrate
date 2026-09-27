@@ -110,43 +110,82 @@ module PartiduoMigrate
       account.starts_with?('4')
     end
 
+    # Lettrage de la source : compte (traduit), code, compte auxiliaire
+    # quand le code est propre à chaque tiers, lignes `{écriture, rang}`.
+    record MatchingGroup, account : String, letter : String, aux : String?, refs : Array({Int32, Int32}) do
+      def reference : String
+        aux.try { |code| "#{account} #{code} #{letter}" } || "#{account} #{letter}"
+      end
+    end
+
+    # Lettrages de la source : lignes d'un même compte et d'un même code de
+    # lettrage. Beaucoup de logiciels (Sage, EBP, Cegid…) lettrent au niveau
+    # du compte auxiliaire et réutilisent les mêmes codes d'un tiers à
+    # l'autre : un code porté par plusieurs comptes auxiliaires, dont chacun
+    # a des lignes au débit et au crédit, forme un lettrage par tiers
+    # (DECISIONS D-MIG-013). Sinon (NOALYSS, lettrage d'un compte général),
+    # le code forme un seul lettrage.
+    def self.matching_groups(dataset : Source::Dataset, mapping : Mapping) : Array(MatchingGroup)
+      groups = Hash({String, String}, Array({Int32, Int32})).new { |hash, key| hash[key] = [] of {Int32, Int32} }
+      dataset.entries.each_with_index do |entry, index|
+        entry.lines.each_with_index do |line, position|
+          letter = line.letter || next
+          groups[{mapping.account(line.account), letter}] << {index, position}
+        end
+      end
+      line_at = ->(ref : {Int32, Int32}) { dataset.entries[ref[0]].lines[ref[1]] }
+      two_sided = ->(refs : Array({Int32, Int32})) do
+        sides = refs.map { |ref| line_at.call(ref).debit > 0 }.uniq!
+        sides.size == 2
+      end
+      result = [] of MatchingGroup
+      groups.each do |(account, letter), refs|
+        by_aux = refs.group_by { |ref| line_at.call(ref).aux }
+        if by_aux.size > 1 && by_aux.values.all? { |list| two_sided.call(list) }
+          by_aux.each { |aux, list| result << MatchingGroup.new(account, letter, aux, list) }
+        else
+          result << MatchingGroup.new(account, letter, nil, refs)
+        end
+      end
+      result
+    end
+
     # Balance âgée de la source, avec les règles du relevé de l'instance :
     # éléments ouverts = lignes non lettrées, et reliquat de chaque lettrage
     # partiel (écart de toutes ses lignes) daté de la plus ancienne
     # référence (échéance, sinon date) des lignes du tiers dans ce lettrage.
     def self.source_ageing(dataset : Source::Dataset, mapping : Mapping, as_of : Time) : Hash(String, Ageing)
-      differences = Hash({String, String}, BigDecimal).new(ZERO)
-      dataset.entries.each do |entry|
-        entry.each_line do |line|
-          letter = line.letter || next
-          key = {mapping.account(line.account), letter}
-          differences[key] += line.signed
-        end
+      group_of = {} of {Int32, Int32} => Int32
+      differences = [] of BigDecimal
+      matching_groups(dataset, mapping).each_with_index do |group, number|
+        differences << group.refs.sum(ZERO) { |(index, position)| dataset.entries[index].lines[position].signed }
+        group.refs.each { |ref| group_of[ref] = number }
       end
       parties = Set(String).new
-      rows = Hash(String, Array({Source::Entry, Source::Line})).new { |hash, key| hash[key] = [] of {Source::Entry, Source::Line} }
-      dataset.entries.each do |entry|
-        entry.each_line do |line|
+      rows = Hash(String, Array({Source::Entry, Source::Line, {Int32, Int32}})).new do |hash, key|
+        hash[key] = [] of {Source::Entry, Source::Line, {Int32, Int32}}
+      end
+      dataset.entries.each_with_index do |entry, index|
+        entry.lines.each_with_index do |line, position|
           code = mapping.card(line.aux) || next
-          rows[code] << {entry, line}
+          rows[code] << {entry, line, {index, position}}
           parties << code if party?(mapping.account(line.account))
         end
       end
       result = {} of String => Ageing
       parties.each do |code|
         ageing = Ageing.new
-        partials = {} of {String, String} => Time
-        rows[code].each do |(entry, line)|
+        partials = {} of Int32 => Time
+        rows[code].each do |(entry, line, ref)|
           reference = entry.due_date || entry.date
-          if letter = line.letter
-            key = {mapping.account(line.account), letter}
-            next if differences[key].zero?
-            partials[key] = [partials[key]? || reference, reference].min
+          if number = group_of[ref]?
+            next if differences[number].zero?
+            partials[number] = [partials[number]? || reference, reference].min
           else
             ageing = ageing.add(line.signed, (as_of - reference).days)
           end
         end
-        partials.each { |key, reference| ageing = ageing.add(differences[key], (as_of - reference).days) }
+        partials.each { |number, reference| ageing = ageing.add(differences[number], (as_of - reference).days) }
         result[code] = ageing
       end
       result
@@ -201,13 +240,46 @@ module PartiduoMigrate
       end
     end
 
-    # Comparaison complète.
+    # Tableau de la comparaison : clé (`migrate.sections.<key>`), colonnes
+    # (`migrate.columns.<colonne>`, la première est un nombre), libellé par
+    # ligne ou non, lignes.
+    record Section, key : String, columns : Array(String), rows : Array(Row), labelled : Bool = false
+
+    # Contrôle de lecture de la source : chiffres relevés indépendamment du
+    # modèle (`Source::Control`) comparés à ceux du modèle, clés de la
+    # source. Vide si la source n'a pas de contrôle.
+    def self.reading(dataset : Source::Dataset) : Array(Section)
+      control = dataset.control || return [] of Section
+      model = Source::Control.of(dataset, control.sides?)
+      columns = control.sides? ? %w[lines debit credit balance] : %w[lines balance]
+      values = ->(tally : Source::Tally) do
+        list = [BigDecimal.new(tally.count)]
+        list.concat([tally.debit, tally.credit]) if control.sides?
+        list << tally.balance
+        list
+      end
+      pairs = {"reading_accounts" => {control.accounts, model.accounts},
+               "reading_journals" => {control.journals, model.journals},
+               "reading_periods"  => {control.periods, model.periods}}
+      pairs.map do |key, (left, right)|
+        rows = (left.keys + right.keys).uniq.sort!.map do |code|
+          Row.new(code, "", values.call(left[code]? || Source::Tally.new), values.call(right[code]? || Source::Tally.new))
+        end
+        Section.new(key, columns, rows)
+      end
+    end
+
+    # Comparaison complète : contrôle de lecture de la source (`reading`),
+    # puis source traduite (avant) et instance (après).
     class Comparison
       getter before : Figures
       getter after : Figures
       getter as_of : Time
+      getter reading : Array(Section)
 
-      def initialize(@before : Figures, @after : Figures, @as_of : Time)
+      AGEING_COLUMNS = %w[not_due days_1_30 days_31_60 over_60 remaining]
+
+      def initialize(@before : Figures, @after : Figures, @as_of : Time, @reading = [] of Section)
       end
 
       def accounts : Array(Row)
@@ -234,13 +306,24 @@ module PartiduoMigrate
         Row.new("total", "", totals_of(before), totals_of(after))
       end
 
-      def sections : Array({String, Array(Row)})
-        [{"balance générale", accounts}, {"balance âgée", ageing}, {"journaux", journals}, {"périodes", periods},
-         {"total", [totals]}]
+      def sections : Array(Section)
+        [Section.new("accounts", %w[lines debit credit balance], accounts, labelled: true),
+         Section.new("ageing", AGEING_COLUMNS, ageing),
+         Section.new("journals", %w[entries debit credit], journals),
+         Section.new("periods", %w[entries debit credit], periods),
+         Section.new("total", %w[entries debit credit], [totals])] + reading
       end
 
-      def failures : Array({String, Row})
-        sections.flat_map { |(name, rows)| rows.reject(&.ok?).map { |row| {name, row} } }
+      def section(key : String) : Section?
+        sections.find(&.key.==(key))
+      end
+
+      def failures : Array({Section, Row})
+        sections.flat_map { |section| section.rows.reject(&.ok?).map { |row| {section, row} } }
+      end
+
+      def reading_ok? : Bool
+        reading.all? { |section| section.rows.all?(&.ok?) }
       end
 
       def ok? : Bool
