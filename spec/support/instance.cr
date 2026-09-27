@@ -18,10 +18,11 @@ module PartiduoMigrate
     end
 
     # Base NOALYSS de démonstration (DBVERSION 208), créée par
-    # `scripts/noalyss-demo` si elle n'existe pas.
+    # `scripts/noalyss-demo` si elle n'existe pas. `NOALYSS_DEMO_URL` : URL
+    # complète (CI, PostgreSQL en TCP) ; sinon socket Unix `/tmp`.
     def self.noalyss_url : String
       name = ENV["NOALYSS_DEMO_DB"]? || "partiduo_noalyss_demo"
-      url = "postgres:///#{name}?host=/tmp"
+      url = ENV["NOALYSS_DEMO_URL"]?.presence || "postgres:///#{name}?host=/tmp"
       exists = begin
         DB.open(url) { |db| db.query_one("SELECT max(val) FROM version", as: Int32?) == Noalyss::DBVERSION }
       rescue

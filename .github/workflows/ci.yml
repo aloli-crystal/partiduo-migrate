@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# CI de partiduo-migrate (ADR-001 D5) : format, Ameba, specs sur PostgreSQL
+# (instance de test et base NOALYSS de démonstration créée par
+# scripts/noalyss-demo depuis les sources SQL de NOALYSS). Non exécutée tant
+# que les dépôts ne sont pas publiés (BLOCAGES B-002).
+name: CI
+
+on:
+  push:
+    branches: [development, production]
+  pull_request:
+
+env:
+  CRYSTAL_VERSION: "1.19.1"
+  SKIP_MARTEN_CLI_PRECOMPILATION: "1"
+
+jobs:
+  qualite:
+    name: Format, Ameba
+    runs-on: ubuntu-latest
+    container: crystallang/crystal:1.19.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dépendances path (cœur, shards maison)
+        run: scripts/ci-checkout-deps.sh
+      - name: Format
+        run: crystal tool format --check src spec config
+      - name: Shards
+        run: shards install
+      - name: Ameba
+        run: mkdir -p bin && crystal build lib/ameba/bin/ameba.cr -o bin/ameba && bin/ameba
+
+  specs:
+    name: Specs
+    runs-on: ubuntu-latest
+    container: crystallang/crystal:1.19.1
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: partiduo
+          POSTGRES_PASSWORD: partiduo
+          POSTGRES_DB: partiduo_test
+        options: >-
+          --health-cmd "pg_isready -U partiduo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # En CI seulement, PostgreSQL est un service joignable en TCP.
+      DATABASE_URL: postgres://partiduo:partiduo@postgres:5432/partiduo_test
+      NOALYSS_DEMO_URL: postgres://partiduo:partiduo@postgres:5432/partiduo_noalyss_demo
+      PGHOST: postgres
+      PGUSER: partiduo
+      PGPASSWORD: partiduo
+      NOALYSS_APP: ${{ github.workspace }}/../noalyss/noalyss-app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Client PostgreSQL (scripts/noalyss-demo)
+        run: apt-get update && apt-get install -y --no-install-recommends postgresql-client
+      - name: Sources SQL de NOALYSS (lecture seule)
+        run: git clone --depth 1 "${NOALYSS_REPO:-https://gitlab.com/noalyss/noalyss.git}" ../noalyss/noalyss-app
+      - name: Dépendances path (cœur, shards maison)
+        run: scripts/ci-checkout-deps.sh
+      - name: Shards
+        run: shards install
+      - name: Base NOALYSS de démonstration
+        run: scripts/noalyss-demo partiduo_noalyss_demo
+      - name: Specs
+        run: crystal spec --order random
