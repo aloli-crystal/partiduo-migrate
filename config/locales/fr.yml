@@ -173,6 +173,8 @@ fr:
       reading_accounts: "lecture de la source : comptes"
       reading_journals: "lecture de la source : journaux"
       reading_periods: "lecture de la source : mois"
+      fec_accounts: "FEC réexporté et relu"
+      editions: "éditions"
     columns:
       lines: "lignes"
       entries: "écritures"
@@ -184,6 +186,7 @@ fr:
       days_31_60: "31 à 60 j"
       over_60: "plus de 60 j"
       remaining: "reste dû"
+      value: "valeur"
     report:
       title: "Rapport de réconciliation — reprise Partiduo"
       toc: "Table des matières"
@@ -259,3 +262,24 @@ fr:
         after_column: "%{column} après"
         source_column: "%{column} source"
         model_column: "%{column} modèle"
+        editions_key: "contrôle"
+        fec_accounts_key: "compte"
+      editions_title: "Éditions de l'instance"
+      editions_intro: "Les chiffres « après » sont ceux des éditions de l'instance : balance générale, balance âgée, journaux. Le FEC de chaque exercice est en outre réexporté par l'instance puis relu par le lecteur de la reprise, et comparé à la balance de la source."
+      fec_title: "FEC réexporté par l'instance et relu"
+      statements_title: "Bilan et compte de résultat"
+      statements_intro: "Établis par l'instance sur la période reprise, pour information : ils n'entrent pas dans la réconciliation."
+      statements_complete: "Tous les comptes soldés sont repris par une rubrique des états."
+      statements_unmapped: "Comptes qu'aucune rubrique des états ne reprend (à vérifier : type ou numéro du compte) : %{accounts}."
+    editions:
+      trial_balance_delta: "Balance générale : débit − crédit"
+      result: "Résultat (produits − charges)"
+      fec_entries: "Écritures du FEC réexporté"
+    statements:
+      balance_sheet:
+        total_assets: "Bilan : total de l'actif"
+        total_liabilities: "Bilan : total du passif"
+        difference: "Bilan : écart actif − passif"
+      income_statement:
+        net_result: "Compte de résultat : résultat"
+        difference: "Compte de résultat : écart avec la balance"

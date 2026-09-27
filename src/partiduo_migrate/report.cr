@@ -5,15 +5,16 @@ require "csv"
 module PartiduoMigrate
   # Rapport de réconciliation écrit dans un dossier : `rapport.adoc`
   # (lisible, publiable) et un CSV par tableau (`balance-generale.csv`,
-  # `balance-agee.csv`, `journaux.csv`, `periodes.csv`, `lecture-source.csv`,
-  # `ecarts.csv`, `anomalies.csv`, `correspondances.csv`, `non-repris.csv`).
+  # `balance-agee.csv`, `journaux.csv`, `periodes.csv`, `fec-relu.csv`,
+  # `editions.csv`, `lecture-source.csv`, `ecarts.csv`, `anomalies.csv`,
+  # `correspondances.csv`, `non-repris.csv`).
   # Textes dans la langue active (`--locale`) ; noms de fichiers fixes.
   # Montants à point décimal dans les CSV, à virgule dans l'AsciiDoc. Les
   # cellules de texte des CSV sont neutralisées contre l'interprétation en
   # formule par un tableur (`cell`).
   class Report
     FILES = {"accounts" => "balance-generale.csv", "ageing" => "balance-agee.csv", "journals" => "journaux.csv",
-             "periods" => "periodes.csv"}
+             "periods" => "periodes.csv", "fec_accounts" => "fec-relu.csv", "editions" => "editions.csv"}
 
     getter directory : String
 
@@ -147,8 +148,9 @@ module PartiduoMigrate
         adjustments(io)
         unported(io)
         io << "== " << t("files_title") << "\n\n"
-        io << "`balance-generale.csv`, `balance-agee.csv`, `journaux.csv`, `periodes.csv`, `lecture-source.csv`, " \
-              "`ecarts.csv`, `anomalies.csv`, `correspondances.csv`, `non-repris.csv`.\n"
+        io << "`balance-generale.csv`, `balance-agee.csv`, `journaux.csv`, `periodes.csv`, `fec-relu.csv`, " \
+              "`editions.csv`, `lecture-source.csv`, `ecarts.csv`, `anomalies.csv`, `correspondances.csv`, " \
+              "`non-repris.csv`.\n"
       end
     end
 
@@ -191,6 +193,35 @@ module PartiduoMigrate
         section = comparison.section(key) || next
         key == "ageing" ? ageing_table(io, comparison, section) : totals_table(io, t(title), section)
       end
+      editions(io, comparison)
+    end
+
+    # Éditions de l'instance (lot 3) : contrôles, FEC réexporté et relu,
+    # bilan et compte de résultat pour information.
+    private def editions(io : IO, comparison : Reconciliation::Comparison) : Nil
+      io << "== " << t("editions_title") << "\n\n" << t("editions_intro") << "\n\n"
+      if section = comparison.section("editions")
+        io << "[cols=\"3,1,1,1\",options=\"header\"]\n|===\n|" << t("csv.editions_key") << " |" <<
+          t("csv.before").capitalize << " |" << t("csv.after").capitalize << " |" << t("csv.status").capitalize << "\n"
+        section.rows.each do |row|
+          io << "|" << PartiduoMigrate.t("editions.#{row.key}") << " |" << amount(row.before[0]) << " |" <<
+            amount(row.after[0]) << " |" << (row.ok? ? t("ok") : "*#{t("difference")}*") << "\n"
+        end
+        io << "|===\n\n"
+      end
+      if section = comparison.section("fec_accounts")
+        totals_table(io, t("fec_title"), section)
+      end
+      statements = comparison.after.statements
+      return if statements.empty?
+      io << "=== " << t("statements_title") << "\n\n" << t("statements_intro") << "\n\n"
+      io << "[cols=\"3,1\",options=\"header\"]\n|===\n|" << t("csv.editions_key") << " |" << t("csv.value").capitalize << "\n"
+      statements.each do |(key, value)|
+        io << "|" << PartiduoMigrate.t("statements.#{key.split('.', 2).last}") << " |" << amount(value) << "\n"
+      end
+      io << "|===\n\n"
+      unmapped = comparison.after.unmapped
+      io << (unmapped.empty? ? t("statements_complete") : t("statements_unmapped", accounts: unmapped.join(", "))) << "\n\n"
     end
 
     private def differences(io : IO, comparison : Reconciliation::Comparison) : Nil
@@ -206,7 +237,8 @@ module PartiduoMigrate
       failures.first(200).each do |(section, row)|
         row.differences.each_with_index do |difference, index|
           next if difference.zero?
-          io << "|" << section_name(section.key) << " |" << escape(row.key) << " |" <<
+          key = section.key == "editions" ? PartiduoMigrate.t("editions.#{row.key}") : row.key
+          io << "|" << section_name(section.key) << " |" << escape(key) << " |" <<
             column(section.columns[index]? || index.to_s) << " |" << number(row.before[index]) << " |" <<
             number(row.after[index]) << " |" << number(difference) << "\n"
         end

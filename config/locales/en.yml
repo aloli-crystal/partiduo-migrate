@@ -173,6 +173,8 @@ en:
       reading_accounts: "source reading: accounts"
       reading_journals: "source reading: journals"
       reading_periods: "source reading: months"
+      fec_accounts: "re-exported and re-read FEC"
+      editions: "reports"
     columns:
       lines: "lines"
       entries: "entries"
@@ -184,6 +186,7 @@ en:
       days_31_60: "31 to 60 d"
       over_60: "over 60 d"
       remaining: "outstanding"
+      value: "value"
     report:
       title: "Reconciliation report — Partiduo migration"
       toc: "Table of contents"
@@ -259,3 +262,24 @@ en:
         after_column: "%{column} after"
         source_column: "%{column} source"
         model_column: "%{column} model"
+        editions_key: "check"
+        fec_accounts_key: "account"
+      editions_title: "Instance reports"
+      editions_intro: "The \"after\" figures come from the instance reports: trial balance, aged balance, journals. The FEC of each fiscal year is also re-exported by the instance, re-read by the migration reader and compared with the source trial balance."
+      fec_title: "FEC re-exported by the instance and re-read"
+      statements_title: "Balance sheet and income statement"
+      statements_intro: "Produced by the instance over the migrated period, for information: they are not part of the reconciliation."
+      statements_complete: "Every account with a balance is included in a statement item."
+      statements_unmapped: "Accounts that no statement item includes (check the account type or number): %{accounts}."
+    editions:
+      trial_balance_delta: "Trial balance: debit − credit"
+      result: "Result (income − expenses)"
+      fec_entries: "Entries in the re-exported FEC"
+    statements:
+      balance_sheet:
+        total_assets: "Balance sheet: total assets"
+        total_liabilities: "Balance sheet: total equity and liabilities"
+        difference: "Balance sheet: assets − liabilities difference"
+      income_statement:
+        net_result: "Income statement: result"
+        difference: "Income statement: difference with the trial balance"

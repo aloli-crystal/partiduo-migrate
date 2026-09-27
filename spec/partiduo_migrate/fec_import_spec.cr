@@ -64,7 +64,8 @@ describe "Reprise d'un FEC" do
     dir = PartiduoMigrate::SpecSupport.report_dir
     files = PartiduoMigrate::Report.new(dir, migration).write
     files.map { |path| File.basename(path) }.sort!.should eq(%w[anomalies.csv balance-agee.csv balance-generale.csv
-      correspondances.csv ecarts.csv journaux.csv lecture-source.csv non-repris.csv periodes.csv rapport.adoc])
+      correspondances.csv ecarts.csv editions.csv fec-relu.csv journaux.csv lecture-source.csv non-repris.csv
+      periodes.csv rapport.adoc])
     report = File.read(File.join(dir, "rapport.adoc"))
     report.should contain("*RÉUSSIE*")
     report.should contain("== Balance générale")

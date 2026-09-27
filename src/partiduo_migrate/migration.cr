@@ -76,7 +76,7 @@ module PartiduoMigrate
       result = Partiduo::Api::Transaction.run do
         @importer.run
         before = Reconciliation.before(@dataset, @importer.mapping, @as_of)
-        after = Reconciliation.after(@as_of, @actor)
+        after = Reconciliation.after(@as_of, @actor, @dataset.first_date, @dataset.last_date)
         @comparison = Reconciliation::Comparison.new(before, after, @as_of, Reconciliation.reading(@dataset))
         if success? && !@dry_run
           Partiduo::Api::Result(Nil).success(nil)

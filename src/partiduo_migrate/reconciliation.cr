@@ -4,10 +4,15 @@ module PartiduoMigrate
   # Rapport de réconciliation (ADR-001 D5) : balance générale, balance âgée
   # des tiers, totaux par journal et par période, calculés *avant* depuis
   # la source (traduite par les correspondances de la reprise) et *après*
-  # en relisant l'instance par le contrat `Partiduo::Api`. Tout écart, même
-  # d'un centime, est un échec.
+  # par les éditions de l'instance (lot 3, contrat `Partiduo::Api`) :
+  # balance générale (`trial_balance`), balance âgée (`aged_balance`),
+  # journaux (`journals`), FEC réexporté puis relu (`fec`), bilan et compte
+  # de résultat (`financial_statement`, à titre d'information). Tout écart,
+  # même d'un centime, est un échec.
   module Reconciliation
     ZERO = BigDecimal.new(0)
+
+    alias Acc = Partiduo::Api::Accounting
 
     # Totaux d'une clé : débit, crédit, nombre (lignes pour un compte,
     # écritures pour un journal ou une période).
@@ -68,15 +73,33 @@ module PartiduoMigrate
       end
     end
 
-    # Chiffres d'un côté (avant ou après).
+    # Chiffres d'un côté (avant ou après). Après : `fec_accounts` et
+    # `fec_entries` viennent du FEC réexporté par l'instance et relu par
+    # `Fec::Reader` ; `trial_delta` (débit − crédit de la balance) et
+    # `result` (produits − charges) de la balance générale ; `statements`
+    # (rubrique → montant) et `unmapped` (comptes qu'aucune rubrique ne
+    # reprend) du bilan et du compte de résultat, pour information.
     class Figures
       getter accounts = Hash(String, Totals).new(Totals.new)
       getter journals = Hash(String, Totals).new(Totals.new)
       getter periods = Hash(String, Totals).new(Totals.new)
       getter ageing = {} of String => Ageing
       getter labels = {} of String => String
+      getter fec_accounts = Hash(String, Totals).new(Totals.new)
+      getter statements = [] of {String, BigDecimal}
+      getter unmapped = [] of String
       property entries = 0
       property total = Totals.new
+      property fec_entries = 0
+      property trial_delta = ZERO
+      property result : BigDecimal? = nil
+
+      # Résultat (produits − charges) : donné par la balance de l'instance,
+      # sinon calculé sur les comptes des classes 6 et 7.
+      def result! : BigDecimal
+        result || accounts.select { |number, _| number.starts_with?('6') || number.starts_with?('7') }
+          .sum(ZERO) { |_, totals| totals.credit - totals.debit }
+      end
     end
 
     def self.period_key(date : Time) : String
@@ -150,15 +173,20 @@ module PartiduoMigrate
       result
     end
 
-    # Balance âgée de la source, avec les règles du relevé de l'instance :
-    # éléments ouverts = lignes non lettrées, et reliquat de chaque lettrage
-    # partiel (écart de toutes ses lignes) daté de la plus ancienne
-    # référence (échéance, sinon date) des lignes du tiers dans ce lettrage.
+    # Balance âgée de la source au jour `as_of`, avec les règles de la
+    # balance âgée de l'instance (`aged_balance`) : seules comptent les
+    # écritures datées au plus tard `as_of` ; éléments ouverts = lignes non
+    # lettrées, et reliquat de chaque lettrage partiel (écart de ses lignes
+    # arrêtées à `as_of`) daté de la plus ancienne référence (échéance,
+    # sinon date) des lignes du tiers dans ce lettrage.
     def self.source_ageing(dataset : Source::Dataset, mapping : Mapping, as_of : Time) : Hash(String, Ageing)
       group_of = {} of {Int32, Int32} => Int32
       differences = [] of BigDecimal
       matching_groups(dataset, mapping).each_with_index do |group, number|
-        differences << group.refs.sum(ZERO) { |(index, position)| dataset.entries[index].lines[position].signed }
+        differences << group.refs.sum(ZERO) do |(index, position)|
+          entry = dataset.entries[index]
+          entry.date <= as_of ? entry.lines[position].signed : ZERO
+        end
         group.refs.each { |ref| group_of[ref] = number }
       end
       parties = Set(String).new
@@ -168,8 +196,8 @@ module PartiduoMigrate
       dataset.entries.each_with_index do |entry, index|
         entry.lines.each_with_index do |line, position|
           code = mapping.card(line.aux) || next
-          rows[code] << {entry, line, {index, position}}
           parties << code if party?(mapping.account(line.account))
+          rows[code] << {entry, line, {index, position}} if entry.date <= as_of
         end
       end
       result = {} of String => Ageing
@@ -191,42 +219,88 @@ module PartiduoMigrate
       result
     end
 
-    PAGE = 500
+    # Natures de fiches parcourues pour la balance âgée : toutes sauf les
+    # articles (un tiers de la source peut être repris en salarié, en
+    # banque ou en « autre »).
+    PARTY_KINDS = Partiduo::Api::Cards::KINDS - %w[item]
 
-    # Chiffres relus dans l'instance par le contrat.
-    def self.after(as_of : Time, actor : Partiduo::Api::Actor = Partiduo::Api::Actor.system) : Figures
+    # Chiffres relus dans l'instance par ses éditions (lot 3), de
+    # `date_from` à `date_to` (les dates extrêmes de la source).
+    def self.after(as_of : Time, actor : Partiduo::Api::Actor = Partiduo::Api::Actor.system,
+                   date_from : Time? = nil, date_to : Time? = nil) : Figures
       figures = Figures.new
-      parties = Set(String).new
-      offset = 0
-      loop do
-        query = Partiduo::Api::Accounting::EntryQuery.new(limit: PAGE, offset: offset)
-        page = Partiduo::Api::Accounting.entries(actor, query)
-        page.each do |entry|
-          debit = entry.total_debit
-          credit = entry.total_credit
-          figures.entries += 1
-          figures.journals[entry.ledger_code] = figures.journals[entry.ledger_code].add(debit, credit)
-          period = period_key(entry.date)
-          figures.periods[period] = figures.periods[period].add(debit, credit)
-          figures.total = figures.total.add(debit, credit)
-          entry_lines = entry.lines
-          entry_lines.each do |line|
-            figures.accounts[line.account_number] = figures.accounts[line.account_number].add(line.debit, line.credit)
-            figures.labels[line.account_number] ||= line.account_label
-            code = line.card_code
-            parties << code if code && party?(line.account_number)
+      from = date_from || as_of
+      to = date_to || as_of
+
+      balance = Acc.trial_balance(actor, Acc::TrialBalanceQuery.new(date_from: from, date_to: to))
+      balance.rows.each do |row|
+        figures.accounts[row.number] = Totals.new(row.debit, row.credit, row.lines)
+        figures.labels[row.number] = row.label
+      end
+      figures.trial_delta = balance.delta
+      figures.result = balance.summary.result
+
+      journals = Acc.journals(actor, Acc::JournalQuery.new(date_from: from, date_to: to))
+      journals.ledgers.each do |ledger|
+        next if ledger.entries.empty?
+        figures.journals[ledger.ledger_code] = Totals.new(ledger.total_debit, ledger.total_credit, ledger.entries.size)
+        ledger.months.each do |month|
+          figures.periods[month.key] = figures.periods[month.key].add(month.debit, month.credit, month.entries)
+        end
+      end
+      figures.entries = journals.entries
+      figures.total = Totals.new(journals.total_debit, journals.total_credit, journals.entries)
+
+      PARTY_KINDS.each do |kind|
+        parties = Acc.auxiliary_balance(actor, Acc::AuxiliaryBalanceQuery.new(date_from: from, date_to: to, kind: kind,
+          account: "4")).rows.map(&.card_code).to_set
+        next if parties.empty?
+        aged = Acc.aged_balance(actor, Acc::AgedBalanceQuery.new(as_of: as_of, kind: kind))
+        aged.rows.each do |row|
+          next unless parties.includes?(row.card_code)
+          ageing = row.ageing
+          figures.ageing[row.card_code] = Ageing.new(ageing.not_due, ageing.days_1_30, ageing.days_31_60, ageing.over_60)
+        end
+      end
+
+      reexport(figures, actor, from, to)
+      statements(figures, actor, from, to)
+      figures
+    end
+
+    # FEC de chaque exercice de l'instance qui recouvre la période, relu par
+    # le lecteur de la reprise : lignes, débit et crédit par compte.
+    private def self.reexport(figures : Figures, actor : Partiduo::Api::Actor, from : Time, to : Time) : Nil
+      Partiduo::Api::Core.fiscal_years(actor).reverse_each do |year|
+        starts = year.starts_on || next
+        ends = year.ends_on || next
+        next if ends < from || starts > to
+        result = Acc.fec(actor, Acc::FecQuery.new(fiscal_year_id: year.id, encoding: Acc::FecEncoding::Utf8))
+        file = result.value? || next
+        dataset = Fec::Reader.new("UTF-8").read(file.content, file.filename)
+        figures.fec_entries += dataset.entries.size
+        dataset.entries.each do |entry|
+          entry.each_line do |line|
+            figures.fec_accounts[line.account] = figures.fec_accounts[line.account].add(line.debit, line.credit)
           end
         end
-        break if page.size < PAGE
-        offset += PAGE
       end
-      parties.each do |code|
-        statement = Partiduo::Api::Accounting.account_statement(actor,
-          Partiduo::Api::Accounting::StatementQuery.new(card: code, as_of: as_of))
-        ageing = statement.ageing
-        figures.ageing[code] = Ageing.new(ageing.not_due, ageing.days_1_30, ageing.days_31_60, ageing.over_60)
+    end
+
+    # Bilan et compte de résultat du régime de l'instance, pour information.
+    private def self.statements(figures : Figures, actor : Partiduo::Api::Actor, from : Time, to : Time) : Nil
+      unmapped = Set(String).new
+      {Acc::StatementKind::BalanceSheet    => %w[total_assets total_liabilities],
+       Acc::StatementKind::IncomeStatement => %w[net_result]}.each do |kind, codes|
+        view = Acc.financial_statement(actor, Acc::FinancialStatementQuery.new(kind: kind, date_from: from, date_to: to,
+          compare: false))
+        codes.each { |code| figures.statements << {"#{view.regime}.#{kind.code}.#{code}", view.line(code).try(&.net) || ZERO} }
+        figures.statements << {"#{view.regime}.#{kind.code}.difference", view.difference}
+        view.unmapped.each { |account| unmapped << account.number }
+      rescue Partiduo::Api::NotFound
+        next
       end
-      figures
+      figures.unmapped.concat(unmapped.to_a.sort!)
     end
 
     # Ligne de comparaison : clé, libellé, valeurs avant et après.
@@ -306,12 +380,27 @@ module PartiduoMigrate
         Row.new("total", "", totals_of(before), totals_of(after))
       end
 
+      # FEC réexporté par l'instance et relu, face à la balance de la source.
+      def fec_accounts : Array(Row)
+        rows(before.accounts, after.fec_accounts, true)
+      end
+
+      # Contrôles des éditions : balance équilibrée, résultat de la balance,
+      # nombre d'écritures du FEC réexporté.
+      def editions : Array(Row)
+        [Row.new("trial_balance_delta", "", [ZERO], [after.trial_delta]),
+         Row.new("result", "", [before.result!], [after.result!]),
+         Row.new("fec_entries", "", [BigDecimal.new(before.entries)], [BigDecimal.new(after.fec_entries)])]
+      end
+
       def sections : Array(Section)
         [Section.new("accounts", %w[lines debit credit balance], accounts, labelled: true),
          Section.new("ageing", AGEING_COLUMNS, ageing),
          Section.new("journals", %w[entries debit credit], journals),
          Section.new("periods", %w[entries debit credit], periods),
-         Section.new("total", %w[entries debit credit], [totals])] + reading
+         Section.new("total", %w[entries debit credit], [totals]),
+         Section.new("fec_accounts", %w[lines debit credit balance], fec_accounts, labelled: true),
+         Section.new("editions", %w[value], editions)] + reading
       end
 
       def section(key : String) : Section?

@@ -25,7 +25,9 @@ le vérifie (`spec/architecture/boundary_spec.cr`).
 == Rapport de réconciliation
 
 Chaque reprise produit un rapport, en AsciiDoc et en CSV, qui compare les
-chiffres de la source (« avant ») à ceux relus dans l'instance (« après ») :
+chiffres de la source (« avant ») à ceux des *éditions de l'instance*
+(« après », lot 3 du cœur : `trial_balance`, `aged_balance`, `journals`,
+`fec`, `financial_statement` de `Partiduo::Api::Accounting`) :
 
 * contrôle de lecture de la source : la source est relue *indépendamment*
   du modèle que la reprise écrit (FEC totalisé pendant la lecture sur les
@@ -34,12 +36,23 @@ chiffres de la source (« avant ») à ceux relus dans l'instance (« après »)
   modèle, par compte, journal et mois — une erreur de lecture (ligne
   perdue, dédoublée, mal soldée) est un écart ;
 
-* balance générale (lignes, débit, crédit, solde par compte) ;
-* balance âgée des tiers (non échu, 1 à 30 jours, 31 à 60, plus de 60, reste
-  dû), avec les règles du relevé de l'instance : lignes non lettrées et
-  reliquat des lettrages partiels, référence = échéance, sinon date ;
-* totaux par journal et par période (nombre d'écritures, débit, crédit) ;
-* totaux généraux.
+* balance générale (lignes, débit, crédit, solde par compte), face à la
+  balance générale de l'instance ;
+* balance âgée des tiers au jour de référence (non échu, 1 à 30 jours, 31 à
+  60, plus de 60, reste dû), face à la balance âgée de l'instance : écritures
+  datées au plus tard ce jour-là, lignes non lettrées et reliquat des
+  lettrages partiels, référence = échéance, sinon date ;
+* totaux par journal et par période (nombre d'écritures, débit, crédit),
+  face aux journaux de l'instance ;
+* totaux généraux ;
+* FEC de chaque exercice *réexporté par l'instance* puis relu par le lecteur
+  de la reprise : lignes, débit et crédit par compte face à la balance de la
+  source ;
+* contrôles des éditions : balance de l'instance équilibrée, résultat
+  (produits − charges), nombre d'écritures du FEC réexporté ;
+* pour information (hors réconciliation) : totaux du bilan et résultat du
+  compte de résultat du régime de l'instance, et comptes qu'aucune rubrique
+  des états ne reprend.
 
 *Tout écart, même d'un centime, est un échec* : la reprise est annulée dans
 son ensemble (une seule transaction), l'instance reste neuve, le code de
@@ -57,6 +70,8 @@ Fichiers écrits dans le dossier `--report` :
 |`balance-generale.csv` |par compte : avant, après, statut
 |`balance-agee.csv` |par fiche de tiers : tranches avant, après, statut
 |`journaux.csv`, `periodes.csv` |totaux par journal et par mois
+|`fec-relu.csv` |FEC réexporté par l'instance et relu, par compte, face à la source
+|`editions.csv` |contrôles des éditions de l'instance
 |`lecture-source.csv` |contrôle de lecture : source relue face au modèle, par compte, journal et mois
 |`ecarts.csv` |chaque valeur en écart (vide si la reprise réconcilie)
 |`anomalies.csv` |refus de l'instance, bloquants ou non

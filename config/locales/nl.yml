@@ -173,6 +173,8 @@ nl:
       reading_accounts: "lezing van de bron: rekeningen"
       reading_journals: "lezing van de bron: dagboeken"
       reading_periods: "lezing van de bron: maanden"
+      fec_accounts: "opnieuw geëxporteerd en gelezen FEC"
+      editions: "rapporten"
     columns:
       lines: "lijnen"
       entries: "boekingen"
@@ -184,6 +186,7 @@ nl:
       days_31_60: "31 tot 60 d"
       over_60: "meer dan 60 d"
       remaining: "openstaand"
+      value: "waarde"
     report:
       title: "Afstemmingsverslag — Partiduo-migratie"
       toc: "Inhoudstafel"
@@ -259,3 +262,24 @@ nl:
         after_column: "%{column} na"
         source_column: "%{column} bron"
         model_column: "%{column} model"
+        editions_key: "controle"
+        fec_accounts_key: "rekening"
+      editions_title: "Rapporten van de instantie"
+      editions_intro: "De cijfers \"na\" komen uit de rapporten van de instantie: proef- en saldibalans, ouderdomsbalans, dagboeken. Het FEC van elk boekjaar wordt bovendien door de instantie opnieuw geëxporteerd, door de lezer van de overname gelezen en vergeleken met de balans van de bron."
+      fec_title: "FEC opnieuw geëxporteerd door de instantie en gelezen"
+      statements_title: "Balans en resultatenrekening"
+      statements_intro: "Door de instantie opgesteld over de overgenomen periode, ter informatie: ze maken geen deel uit van de aansluiting."
+      statements_complete: "Elke rekening met een saldo is in een rubriek van de staten opgenomen."
+      statements_unmapped: "Rekeningen die in geen enkele rubriek zijn opgenomen (controleer type of nummer): %{accounts}."
+    editions:
+      trial_balance_delta: "Proef- en saldibalans: debet − credit"
+      result: "Resultaat (opbrengsten − kosten)"
+      fec_entries: "Boekingen in het opnieuw geëxporteerde FEC"
+    statements:
+      balance_sheet:
+        total_assets: "Balans: totaal activa"
+        total_liabilities: "Balans: totaal passiva"
+        difference: "Balans: verschil activa − passiva"
+      income_statement:
+        net_result: "Resultatenrekening: resultaat"
+        difference: "Resultatenrekening: verschil met de balans"
