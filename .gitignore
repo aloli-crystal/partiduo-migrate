@@ -10,3 +10,7 @@
 /tmp/
 /media/
 /rapport*/
+
+# Le fichier global de l’utilisateur ignore *.sql et .editorconfig : ceux-ci font partie du dépôt.
+!/scripts/*.sql
+!/.editorconfig
