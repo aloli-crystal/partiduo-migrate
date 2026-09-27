@@ -1,0 +1,99 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+require "../spec_helper"
+
+describe "Reprise d'une base NOALYSS" do
+  it "exporte de la base de démonstration exactement le FEC livré" do
+    url = PartiduoMigrate::SpecSupport.noalyss_url
+    dataset = PartiduoMigrate::Noalyss::Database.new(url).read(with_attachments: false)
+    io = IO::Memory.new
+    PartiduoMigrate::Fec::Writer.new.write(dataset, io)
+    io.to_slice.should eq(File.read(PartiduoMigrate::SpecSupport::DEMO_FEC).to_slice)
+    PartiduoMigrate::Noalyss::Database.new(url).siren.should eq("732829320")
+  end
+
+  it "reprend la base : fiches complètes, TVA, exercice, pièces jointes, réconciliation au centime" do
+    PartiduoMigrate::SpecSupport.provision!
+    dataset = PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read
+    migration = PartiduoMigrate::Migration.new(dataset)
+    ok = migration.run
+    ok.should be_true
+    migration.problems.select(&.blocking).should be_empty
+    migration.comparison.present!.ok?.should be_true
+    Partiduo::Api::Accounting.count_entries(actor).should eq(133)
+    migration.counts["pièces jointes"].should eq(14)
+    migration.counts["lettrages"].should eq(43)
+
+    # Fiche complète : adresse, SIREN, numéro de TVA, contact.
+    card = Partiduo::Api::Cards.card_by_code(actor, "AUBEPINE").present!
+    card.vat_number.should eq("FR40303265045")
+    card.siren.should eq("303265045")
+    card.contact_name.should eq("Claire Martin")
+    card.email.should eq("contact@aubepine.example")
+    card.address.present!.city.should eq("Nantes")
+    card.address.present!.country_code.should eq("FR")
+    Partiduo::Api::Accounting.card_account(actor, card.id).present!.account.number.should eq("4100002")
+    item = Partiduo::Api::Cards.card_by_code(actor, "CONSEIL").present!
+    item.kind.should eq("item")
+    item.sale_price.should eq(BigDecimal.new("650"))
+    item.vat_rate_code.should eq("NOR")
+
+    # Paramètres de TVA : taux de la base, comptes de TVA.
+    rate = Partiduo::Api::Vat.rate_by_code(actor, "INTS").present!
+    rate.reverse_charge.should be_true
+    accounts = Partiduo::Api::Accounting.vat_rate_account(actor, Partiduo::Api::Vat.rate_by_code(actor, "NOR").present!.id)
+    accounts.present!.deductible_account.present!.number.should eq("445661")
+    accounts.present!.collected_account.present!.number.should eq("44571")
+    Partiduo::Api::Vat.rate_by_code(actor, "DNPR").should_not be_nil
+
+    # Pièce jointe rattachée à l'écriture de loyer de janvier.
+    entry = Partiduo::Api::Accounting.entries(actor, Partiduo::Api::Accounting::EntryQuery.new(receipt: "A-0001")).first
+    attachment = Partiduo::Api::Core.attachment(actor, entry.attachment_id.present!)
+    attachment.filename.should eq("loyer-2024-01.pdf")
+    attachment.content_type.should eq("application/pdf")
+    entry.due_date.should eq(Time.utc(2024, 1, 10))
+    entry.source.should start_with("noalyss:")
+
+    # Échéances reprises : la balance âgée en tient compte.
+    ageing = migration.comparison.present!.after.ageing["DUNE"]
+    ageing.not_due.should eq(BigDecimal.new("3600.00"))
+
+    # Analytique relevée, non reprise (pas encore de contrat).
+    dataset.unported.count(&.kind.==("analytique")).should eq(18)
+    dataset.unported.count(&.kind.==("poste analytique")).should eq(3)
+
+    # Les utilisateurs de NOALYSS ne sont jamais repris.
+    Partiduo::Api::Auth.users(actor).should be_empty
+  end
+
+  it "complète un FEC par la base NOALYSS dont il est issu" do
+    PartiduoMigrate::SpecSupport.provision!
+    noalyss = PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read
+    dataset = PartiduoMigrate::Complement.merge(demo_dataset, noalyss)
+    migration = PartiduoMigrate::Migration.new(dataset)
+    migration.run.should be_true
+    migration.counts["pièces jointes"].should eq(14)
+    entry = Partiduo::Api::Accounting.entries(actor, Partiduo::Api::Accounting::EntryQuery.new(receipt: "V24-0004")).first
+    entry.source.should start_with("fec:")
+    entry.attachment_id.should_not be_nil
+    Partiduo::Api::Cards.card_by_code(actor, "BRISEMAR").present!.siren.should eq("404833048")
+  end
+end
+
+describe "Reprise d'une fiche NOALYSS aux valeurs refusées" do
+  it "conserve en attribut propre un numéro de TVA que le socle refuse" do
+    PartiduoMigrate::SpecSupport.provision!
+    dataset = PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read
+    index = dataset.cards.index!(&.code.==("CEDRE"))
+    card = dataset.cards[index]
+    attributes = card.attributes.dup
+    attributes[13_i64] = "FR00123"
+    dataset.cards[index] = card.copy_with(attributes: attributes)
+    migration = PartiduoMigrate::Migration.new(dataset)
+    migration.run.should be_true
+    view = Partiduo::Api::Cards.card_by_code(actor, "CEDRE").present!
+    view.vat_number.should eq("")
+    view.extra["noalyss_13"].as_s.should eq("FR00123")
+    migration.notes.any?(&.includes?("vat_number « FR00123 » refusé")).should be_true
+  end
+end

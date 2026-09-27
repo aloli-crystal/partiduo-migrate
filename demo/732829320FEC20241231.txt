@@ -1,0 +1,355 @@
+JournalCode	JournalLib	EcritureNum	EcritureDate	CompteNum	CompteLib	CompAuxNum	CompAuxLib	PieceRef	PieceDate	EcritureLib	Debit	Credit	EcritureLet	DateLet	ValidDate	Montantdevise	Idevise
+O01	Opération Diverses	1	20240101	510001	Banque	BANQUE	Banque	O-AN2024	20240101	Reprise des soldes au 1er janvier 2024	24800,00	0,00			20240101		
+O01	Opération Diverses	1	20240101	4100003	Brise Marine SAS	BRISEMAR	Brise Marine SAS	O-AN2024	20240101	Reprise des soldes au 1er janvier 2024	1800,00	0,00			20240101		
+O01	Opération Diverses	1	20240101	101	Capital			O-AN2024	20240101	Reprise des soldes au 1er janvier 2024	0,00	10000,00			20240101		
+O01	Opération Diverses	1	20240101	1068	Autres réserves			O-AN2024	20240101	Reprise des soldes au 1er janvier 2024	0,00	1600,00			20240101		
+O01	Opération Diverses	1	20240101	164	Emprunts auprès des établissements de crédit			O-AN2024	20240101	Reprise des soldes au 1er janvier 2024	0,00	15000,00			20240101		
+A01	Achat	2	20240101	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0001	20240101	Loyer 01/2024	1200,00	0,00			20240101		
+A01	Achat	2	20240101	445661	TVA  France métropolitaine - Taux normal			A-0001	20240101	Loyer 01/2024	240,00	0,00			20240101		
+A01	Achat	2	20240101	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0001	20240101	Loyer 01/2024	0,00	1440,00	A	20240110	20240101		
+A01	Achat	3	20240103	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0002	20240103	Téléphonie 01/2024	89,90	0,00			20240103		
+A01	Achat	3	20240103	445661	TVA  France métropolitaine - Taux normal			A-0002	20240103	Téléphonie 01/2024	17,98	0,00			20240103		
+A01	Achat	3	20240103	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0002	20240103	Téléphonie 01/2024	0,00	107,88	B	20240120	20240103		
+V01	Vente	4	20240105	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	V24-0001	20240105	Mission de conseil 01/2024	1995,00	0,00	AC	20240209	20240105		
+V01	Vente	4	20240105	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0001	20240105	Mission de conseil 01/2024	0,00	1662,50			20240105		
+V01	Vente	4	20240105	44571	TVA  France métropolitaine - Taux normal			V24-0001	20240105	Mission de conseil 01/2024	0,00	332,50			20240105		
+F01	Financier	5	20240110	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0001	20240110	Prélèvement loyer	1440,00	0,00	A	20240110	20240110		
+F01	Financier	5	20240110	510001	Banque	BANQUE	Banque	F-0001	20240110	Prélèvement loyer	0,00	1440,00			20240110		
+F01	Financier	6	20240120	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0002	20240120	Prélèvement téléphonie	107,88	0,00	B	20240120	20240120		
+F01	Financier	6	20240120	510001	Banque	BANQUE	Banque	F-0002	20240120	Prélèvement téléphonie	0,00	107,88			20240120		
+F01	Financier	7	20240125	164	Emprunts auprès des établissements de crédit			F-0004	20240125	Échéance emprunt BPO	1182,35	0,00			20240125		
+F01	Financier	7	20240125	6611	Intérêts des emprunts et dettes			F-0004	20240125	Échéance emprunt BPO	50,05	0,00			20240125		
+F01	Financier	7	20240125	510001	Banque	BANQUE	Banque	F-0004	20240125	Échéance emprunt BPO	0,00	1232,40			20240125		
+O01	Opération Diverses	8	20240131	641	Rémunérations du personnel			O-SAL01	20240131	Salaires 01/2024	2800,00	0,00			20240131		
+O01	Opération Diverses	8	20240131	645	Charges de sécurité sociale et de prévoyance			O-SAL01	20240131	Salaires 01/2024	1150,40	0,00			20240131		
+O01	Opération Diverses	8	20240131	421	Personnel - Rémunérations dues			O-SAL01	20240131	Salaires 01/2024	0,00	2184,56			20240131		
+O01	Opération Diverses	8	20240131	431	Sécurité sociale			O-SAL01	20240131	Salaires 01/2024	0,00	1765,84			20240131		
+F01	Financier	9	20240131	421	Personnel - Rémunérations dues			F-0003	20240131	Virement des salaires	2184,56	0,00			20240131		
+F01	Financier	9	20240131	510001	Banque	BANQUE	Banque	F-0003	20240131	Virement des salaires	0,00	2184,56			20240131		
+A01	Achat	10	20240201	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0003	20240201	Loyer 02/2024	1200,00	0,00			20240201		
+A01	Achat	10	20240201	445661	TVA  France métropolitaine - Taux normal			A-0003	20240201	Loyer 02/2024	240,00	0,00			20240201		
+A01	Achat	10	20240201	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0003	20240201	Loyer 02/2024	0,00	1440,00	C	20240210	20240201		
+A01	Achat	11	20240203	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0004	20240203	Téléphonie 02/2024	89,90	0,00			20240203		
+A01	Achat	11	20240203	445661	TVA  France métropolitaine - Taux normal			A-0004	20240203	Téléphonie 02/2024	17,98	0,00			20240203		
+A01	Achat	11	20240203	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0004	20240203	Téléphonie 02/2024	0,00	107,88	D	20240220	20240203		
+V01	Vente	12	20240205	4100003	Brise Marine SAS	BRISEMAR	Brise Marine SAS	V24-0002	20240205	Mission de conseil 02/2024	2190,00	0,00	AD	20240311	20240205		
+V01	Vente	12	20240205	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0002	20240205	Mission de conseil 02/2024	0,00	1825,00			20240205		
+V01	Vente	12	20240205	44571	TVA  France métropolitaine - Taux normal			V24-0002	20240205	Mission de conseil 02/2024	0,00	365,00			20240205		
+F01	Financier	13	20240209	510001	Banque	BANQUE	Banque	F-0057	20240209	Règlement V24-0001	1995,00	0,00			20240209		
+F01	Financier	13	20240209	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	F-0057	20240209	Règlement V24-0001	0,00	1995,00	AC	20240209	20240209		
+F01	Financier	14	20240210	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0005	20240210	Prélèvement loyer	1440,00	0,00	C	20240210	20240210		
+F01	Financier	14	20240210	510001	Banque	BANQUE	Banque	F-0005	20240210	Prélèvement loyer	0,00	1440,00			20240210		
+V01	Vente	15	20240215	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	V24-0003	20240215	Vente d'ouvrages	262,70	0,00	AE	20240321	20240215		
+V01	Vente	15	20240215	707	Ventes de marchandises	LIVRES	Ouvrages et supports	V24-0003	20240215	Vente d'ouvrages	0,00	249,00			20240215		
+V01	Vente	15	20240215	44572	TVA 5,5% - France métropolitaine - Taux réduit			V24-0003	20240215	Vente d'ouvrages	0,00	13,70			20240215		
+F01	Financier	16	20240220	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0006	20240220	Prélèvement téléphonie	107,88	0,00	D	20240220	20240220		
+F01	Financier	16	20240220	510001	Banque	BANQUE	Banque	F-0006	20240220	Prélèvement téléphonie	0,00	107,88			20240220		
+V01	Vente	17	20240220	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0019	20240220	Avoir - remise commerciale	200,00	0,00			20240220		
+V01	Vente	17	20240220	44571	TVA  France métropolitaine - Taux normal			V24-0019	20240220	Avoir - remise commerciale	40,00	0,00			20240220		
+V01	Vente	17	20240220	4100003	Brise Marine SAS	BRISEMAR	Brise Marine SAS	V24-0019	20240220	Avoir - remise commerciale	0,00	240,00	AD	20240311	20240220		
+F01	Financier	18	20240225	164	Emprunts auprès des établissements de crédit			F-0008	20240225	Échéance emprunt BPO	1184,70	0,00			20240225		
+F01	Financier	18	20240225	6611	Intérêts des emprunts et dettes			F-0008	20240225	Échéance emprunt BPO	47,70	0,00			20240225		
+F01	Financier	18	20240225	510001	Banque	BANQUE	Banque	F-0008	20240225	Échéance emprunt BPO	0,00	1232,40			20240225		
+O01	Opération Diverses	19	20240229	641	Rémunérations du personnel			O-SAL02	20240229	Salaires 02/2024	2800,00	0,00			20240229		
+O01	Opération Diverses	19	20240229	645	Charges de sécurité sociale et de prévoyance			O-SAL02	20240229	Salaires 02/2024	1150,40	0,00			20240229		
+O01	Opération Diverses	19	20240229	421	Personnel - Rémunérations dues			O-SAL02	20240229	Salaires 02/2024	0,00	2184,56			20240229		
+O01	Opération Diverses	19	20240229	431	Sécurité sociale			O-SAL02	20240229	Salaires 02/2024	0,00	1765,84			20240229		
+F01	Financier	20	20240229	421	Personnel - Rémunérations dues			F-0007	20240229	Virement des salaires	2184,56	0,00			20240229		
+F01	Financier	20	20240229	510001	Banque	BANQUE	Banque	F-0007	20240229	Virement des salaires	0,00	2184,56			20240229		
+A01	Achat	21	20240301	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0005	20240301	Loyer 03/2024	1200,00	0,00			20240301		
+A01	Achat	21	20240301	445661	TVA  France métropolitaine - Taux normal			A-0005	20240301	Loyer 03/2024	240,00	0,00			20240301		
+A01	Achat	21	20240301	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0005	20240301	Loyer 03/2024	0,00	1440,00	E	20240310	20240301		
+A01	Achat	22	20240303	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0006	20240303	Téléphonie 03/2024	89,90	0,00			20240303		
+A01	Achat	22	20240303	445661	TVA  France métropolitaine - Taux normal			A-0006	20240303	Téléphonie 03/2024	17,98	0,00			20240303		
+A01	Achat	22	20240303	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0006	20240303	Téléphonie 03/2024	0,00	107,88	F	20240320	20240303		
+V01	Vente	23	20240305	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	V24-0004	20240305	Mission de conseil 03/2024	2250,00	0,00	AF	20240409	20240305		
+V01	Vente	23	20240305	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0004	20240305	Mission de conseil 03/2024	0,00	1875,00			20240305		
+V01	Vente	23	20240305	44571	TVA  France métropolitaine - Taux normal			V24-0004	20240305	Mission de conseil 03/2024	0,00	375,00			20240305		
+F01	Financier	24	20240310	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0009	20240310	Prélèvement loyer	1440,00	0,00	E	20240310	20240310		
+F01	Financier	24	20240310	510001	Banque	BANQUE	Banque	F-0009	20240310	Prélèvement loyer	0,00	1440,00			20240310		
+F01	Financier	25	20240311	510001	Banque	BANQUE	Banque	F-0058	20240311	Règlement V24-0002	1950,00	0,00			20240311		
+F01	Financier	25	20240311	4100003	Brise Marine SAS	BRISEMAR	Brise Marine SAS	F-0058	20240311	Règlement V24-0002	0,00	1950,00	AD	20240311	20240311		
+A01	Achat	26	20240315	6061	Fournitures non stockables	FOURNIT	Fournitures de bureau	A-0007	20240315	Fournitures de bureau	282,80	0,00			20240315		
+A01	Achat	26	20240315	445661	TVA  France métropolitaine - Taux normal			A-0007	20240315	Fournitures de bureau	56,56	0,00			20240315		
+A01	Achat	26	20240315	4000004	Papeterie Nantaise	PAPETERIE	Papeterie Nantaise	A-0007	20240315	Fournitures de bureau	0,00	339,36	G	20240412	20240315		
+F01	Financier	27	20240315	431	Sécurité sociale			F-0014	20240315	URSSAF trimestre	5297,52	0,00			20240315		
+F01	Financier	27	20240315	510001	Banque	BANQUE	Banque	F-0014	20240315	URSSAF trimestre	0,00	5297,52			20240315		
+F01	Financier	28	20240320	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0010	20240320	Prélèvement téléphonie	107,88	0,00	F	20240320	20240320		
+F01	Financier	28	20240320	510001	Banque	BANQUE	Banque	F-0010	20240320	Prélèvement téléphonie	0,00	107,88			20240320		
+F01	Financier	29	20240321	510001	Banque	BANQUE	Banque	F-0059	20240321	Règlement V24-0003	262,70	0,00			20240321		
+F01	Financier	29	20240321	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	F-0059	20240321	Règlement V24-0003	0,00	262,70	AE	20240321	20240321		
+A01	Achat	30	20240325	6226	Honoraires	HONORAIRE	Honoraires comptables	A-0008	20240325	Honoraires comptables	1500,00	0,00			20240325		
+A01	Achat	30	20240325	445661	TVA  France métropolitaine - Taux normal			A-0008	20240325	Honoraires comptables	300,00	0,00			20240325		
+A01	Achat	30	20240325	4000005	Cabinet Expert & Chiffres	EXPERT	Cabinet Expert & Chiffres	A-0008	20240325	Honoraires comptables	0,00	1800,00	H	20240508	20240325		
+F01	Financier	31	20240325	164	Emprunts auprès des établissements de crédit			F-0015	20240325	Échéance emprunt BPO	1187,05	0,00			20240325		
+F01	Financier	31	20240325	6611	Intérêts des emprunts et dettes			F-0015	20240325	Échéance emprunt BPO	45,35	0,00			20240325		
+F01	Financier	31	20240325	510001	Banque	BANQUE	Banque	F-0015	20240325	Échéance emprunt BPO	0,00	1232,40			20240325		
+O01	Opération Diverses	32	20240331	641	Rémunérations du personnel			O-SAL03	20240331	Salaires 03/2024	2800,00	0,00			20240331		
+O01	Opération Diverses	32	20240331	645	Charges de sécurité sociale et de prévoyance			O-SAL03	20240331	Salaires 03/2024	1150,40	0,00			20240331		
+O01	Opération Diverses	32	20240331	421	Personnel - Rémunérations dues			O-SAL03	20240331	Salaires 03/2024	0,00	2184,56			20240331		
+O01	Opération Diverses	32	20240331	431	Sécurité sociale			O-SAL03	20240331	Salaires 03/2024	0,00	1765,84			20240331		
+F01	Financier	33	20240331	421	Personnel - Rémunérations dues			F-0013	20240331	Virement des salaires	2184,56	0,00			20240331		
+F01	Financier	33	20240331	510001	Banque	BANQUE	Banque	F-0013	20240331	Virement des salaires	0,00	2184,56			20240331		
+A01	Achat	34	20240401	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0009	20240401	Loyer 04/2024	1200,00	0,00			20240401		
+A01	Achat	34	20240401	445661	TVA  France métropolitaine - Taux normal			A-0009	20240401	Loyer 04/2024	240,00	0,00			20240401		
+A01	Achat	34	20240401	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0009	20240401	Loyer 04/2024	0,00	1440,00	I	20240410	20240401		
+A01	Achat	35	20240403	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0010	20240403	Téléphonie 04/2024	89,90	0,00			20240403		
+A01	Achat	35	20240403	445661	TVA  France métropolitaine - Taux normal			A-0010	20240403	Téléphonie 04/2024	17,98	0,00			20240403		
+A01	Achat	35	20240403	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0010	20240403	Téléphonie 04/2024	0,00	107,88	J	20240420	20240403		
+V01	Vente	36	20240405	4100005	Dune Évènements	DUNE	Dune Évènements	V24-0005	20240405	Mission de conseil 04/2024	2445,00	0,00	AG	20240510	20240405		
+V01	Vente	36	20240405	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0005	20240405	Mission de conseil 04/2024	0,00	2037,50			20240405		
+V01	Vente	36	20240405	44571	TVA  France métropolitaine - Taux normal			V24-0005	20240405	Mission de conseil 04/2024	0,00	407,50			20240405		
+F01	Financier	37	20240409	510001	Banque	BANQUE	Banque	F-0060	20240409	Règlement V24-0004	2250,00	0,00			20240409		
+F01	Financier	37	20240409	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	F-0060	20240409	Règlement V24-0004	0,00	2250,00	AF	20240409	20240409		
+F01	Financier	38	20240410	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0016	20240410	Prélèvement loyer	1440,00	0,00	I	20240410	20240410		
+F01	Financier	38	20240410	510001	Banque	BANQUE	Banque	F-0016	20240410	Prélèvement loyer	0,00	1440,00			20240410		
+F01	Financier	39	20240412	4000004	Papeterie Nantaise	PAPETERIE	Papeterie Nantaise	F-0011	20240412	Virement Papeterie Nantaise	339,36	0,00	G	20240412	20240412		
+F01	Financier	39	20240412	510001	Banque	BANQUE	Banque	F-0011	20240412	Virement Papeterie Nantaise	0,00	339,36			20240412		
+V01	Vente	40	20240415	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	V24-0006	20240415	Vente d'ouvrages	315,23	0,00	AH	20240520	20240415		
+V01	Vente	40	20240415	707	Ventes de marchandises	LIVRES	Ouvrages et supports	V24-0006	20240415	Vente d'ouvrages	0,00	298,80			20240415		
+V01	Vente	40	20240415	44572	TVA 5,5% - France métropolitaine - Taux réduit			V24-0006	20240415	Vente d'ouvrages	0,00	16,43			20240415		
+F01	Financier	41	20240420	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0017	20240420	Prélèvement téléphonie	107,88	0,00	J	20240420	20240420		
+F01	Financier	41	20240420	510001	Banque	BANQUE	Banque	F-0017	20240420	Prélèvement téléphonie	0,00	107,88			20240420		
+F01	Financier	42	20240425	164	Emprunts auprès des établissements de crédit			F-0019	20240425	Échéance emprunt BPO	1189,40	0,00			20240425		
+F01	Financier	42	20240425	6611	Intérêts des emprunts et dettes			F-0019	20240425	Échéance emprunt BPO	43,00	0,00			20240425		
+F01	Financier	42	20240425	510001	Banque	BANQUE	Banque	F-0019	20240425	Échéance emprunt BPO	0,00	1232,40			20240425		
+O01	Opération Diverses	43	20240430	641	Rémunérations du personnel			O-SAL04	20240430	Salaires 04/2024	2800,00	0,00			20240430		
+O01	Opération Diverses	43	20240430	645	Charges de sécurité sociale et de prévoyance			O-SAL04	20240430	Salaires 04/2024	1150,40	0,00			20240430		
+O01	Opération Diverses	43	20240430	421	Personnel - Rémunérations dues			O-SAL04	20240430	Salaires 04/2024	0,00	2184,56			20240430		
+O01	Opération Diverses	43	20240430	431	Sécurité sociale			O-SAL04	20240430	Salaires 04/2024	0,00	1765,84			20240430		
+F01	Financier	44	20240430	421	Personnel - Rémunérations dues			F-0018	20240430	Virement des salaires	2184,56	0,00			20240430		
+F01	Financier	44	20240430	510001	Banque	BANQUE	Banque	F-0018	20240430	Virement des salaires	0,00	2184,56			20240430		
+A01	Achat	45	20240501	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0011	20240501	Loyer 05/2024	1200,00	0,00			20240501		
+A01	Achat	45	20240501	445661	TVA  France métropolitaine - Taux normal			A-0011	20240501	Loyer 05/2024	240,00	0,00			20240501		
+A01	Achat	45	20240501	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0011	20240501	Loyer 05/2024	0,00	1440,00	K	20240510	20240501		
+A01	Achat	46	20240503	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0012	20240503	Téléphonie 05/2024	89,90	0,00			20240503		
+A01	Achat	46	20240503	445661	TVA  France métropolitaine - Taux normal			A-0012	20240503	Téléphonie 05/2024	17,98	0,00			20240503		
+A01	Achat	46	20240503	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0012	20240503	Téléphonie 05/2024	0,00	107,88	L	20240520	20240503		
+V01	Vente	47	20240505	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	V24-0007	20240505	Mission de conseil 05/2024	2640,00	0,00	AI	20240609	20240505		
+V01	Vente	47	20240505	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0007	20240505	Mission de conseil 05/2024	0,00	2200,00			20240505		
+V01	Vente	47	20240505	44571	TVA  France métropolitaine - Taux normal			V24-0007	20240505	Mission de conseil 05/2024	0,00	440,00			20240505		
+F01	Financier	48	20240508	4000005	Cabinet Expert & Chiffres	EXPERT	Cabinet Expert & Chiffres	F-0012	20240508	Virement Expert & Chiffres	1800,00	0,00	H	20240508	20240508		
+F01	Financier	48	20240508	510001	Banque	BANQUE	Banque	F-0012	20240508	Virement Expert & Chiffres	0,00	1800,00			20240508		
+F01	Financier	49	20240510	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0020	20240510	Prélèvement loyer	1440,00	0,00	K	20240510	20240510		
+F01	Financier	49	20240510	510001	Banque	BANQUE	Banque	F-0020	20240510	Prélèvement loyer	0,00	1440,00			20240510		
+F01	Financier	50	20240510	510001	Banque	BANQUE	Banque	F-0061	20240510	Règlement V24-0005	2445,00	0,00			20240510		
+F01	Financier	50	20240510	4100005	Dune Évènements	DUNE	Dune Évènements	F-0061	20240510	Règlement V24-0005	0,00	2445,00	AG	20240510	20240510		
+F01	Financier	51	20240520	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0021	20240520	Prélèvement téléphonie	107,88	0,00	L	20240520	20240520		
+F01	Financier	51	20240520	510001	Banque	BANQUE	Banque	F-0021	20240520	Prélèvement téléphonie	0,00	107,88			20240520		
+F01	Financier	52	20240520	510001	Banque	BANQUE	Banque	F-0062	20240520	Règlement V24-0006	315,23	0,00			20240520		
+F01	Financier	52	20240520	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	F-0062	20240520	Règlement V24-0006	0,00	315,23	AH	20240520	20240520		
+F01	Financier	53	20240525	164	Emprunts auprès des établissements de crédit			F-0023	20240525	Échéance emprunt BPO	1191,75	0,00			20240525		
+F01	Financier	53	20240525	6611	Intérêts des emprunts et dettes			F-0023	20240525	Échéance emprunt BPO	40,65	0,00			20240525		
+F01	Financier	53	20240525	510001	Banque	BANQUE	Banque	F-0023	20240525	Échéance emprunt BPO	0,00	1232,40			20240525		
+O01	Opération Diverses	54	20240531	641	Rémunérations du personnel			O-SAL05	20240531	Salaires 05/2024	2800,00	0,00			20240531		
+O01	Opération Diverses	54	20240531	645	Charges de sécurité sociale et de prévoyance			O-SAL05	20240531	Salaires 05/2024	1150,40	0,00			20240531		
+O01	Opération Diverses	54	20240531	421	Personnel - Rémunérations dues			O-SAL05	20240531	Salaires 05/2024	0,00	2184,56			20240531		
+O01	Opération Diverses	54	20240531	431	Sécurité sociale			O-SAL05	20240531	Salaires 05/2024	0,00	1765,84			20240531		
+F01	Financier	55	20240531	421	Personnel - Rémunérations dues			F-0022	20240531	Virement des salaires	2184,56	0,00			20240531		
+F01	Financier	55	20240531	510001	Banque	BANQUE	Banque	F-0022	20240531	Virement des salaires	0,00	2184,56			20240531		
+A01	Achat	56	20240601	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0013	20240601	Loyer 06/2024	1200,00	0,00			20240601		
+A01	Achat	56	20240601	445661	TVA  France métropolitaine - Taux normal			A-0013	20240601	Loyer 06/2024	240,00	0,00			20240601		
+A01	Achat	56	20240601	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0013	20240601	Loyer 06/2024	0,00	1440,00	M	20240610	20240601		
+A01	Achat	57	20240603	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0014	20240603	Téléphonie 06/2024	89,90	0,00			20240603		
+A01	Achat	57	20240603	445661	TVA  France métropolitaine - Taux normal			A-0014	20240603	Téléphonie 06/2024	17,98	0,00			20240603		
+A01	Achat	57	20240603	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0014	20240603	Téléphonie 06/2024	0,00	107,88	N	20240620	20240603		
+V01	Vente	58	20240605	4100003	Brise Marine SAS	BRISEMAR	Brise Marine SAS	V24-0008	20240605	Mission de conseil 06/2024	2700,00	0,00	AJ	20240710	20240605		
+V01	Vente	58	20240605	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0008	20240605	Mission de conseil 06/2024	0,00	2250,00			20240605		
+V01	Vente	58	20240605	44571	TVA  France métropolitaine - Taux normal			V24-0008	20240605	Mission de conseil 06/2024	0,00	450,00			20240605		
+F01	Financier	59	20240609	510001	Banque	BANQUE	Banque	F-0063	20240609	Règlement V24-0007	2640,00	0,00			20240609		
+F01	Financier	59	20240609	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	F-0063	20240609	Règlement V24-0007	0,00	2640,00	AI	20240609	20240609		
+F01	Financier	60	20240610	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0024	20240610	Prélèvement loyer	1440,00	0,00	M	20240610	20240610		
+F01	Financier	60	20240610	510001	Banque	BANQUE	Banque	F-0024	20240610	Prélèvement loyer	0,00	1440,00			20240610		
+V01	Vente	61	20240615	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	V24-0009	20240615	Vente d'ouvrages	367,77	0,00	AK	20240720	20240615		
+V01	Vente	61	20240615	707	Ventes de marchandises	LIVRES	Ouvrages et supports	V24-0009	20240615	Vente d'ouvrages	0,00	348,60			20240615		
+V01	Vente	61	20240615	44572	TVA 5,5% - France métropolitaine - Taux réduit			V24-0009	20240615	Vente d'ouvrages	0,00	19,17			20240615		
+A01	Achat	62	20240615	6061	Fournitures non stockables	FOURNIT	Fournitures de bureau	A-0015	20240615	Fournitures de bureau	320,30	0,00			20240615		
+A01	Achat	62	20240615	445661	TVA  France métropolitaine - Taux normal			A-0015	20240615	Fournitures de bureau	64,06	0,00			20240615		
+A01	Achat	62	20240615	4000004	Papeterie Nantaise	PAPETERIE	Papeterie Nantaise	A-0015	20240615	Fournitures de bureau	0,00	384,36	O	20240712	20240615		
+F01	Financier	63	20240615	431	Sécurité sociale			F-0028	20240615	URSSAF trimestre	5297,52	0,00			20240615		
+F01	Financier	63	20240615	510001	Banque	BANQUE	Banque	F-0028	20240615	URSSAF trimestre	0,00	5297,52			20240615		
+F01	Financier	64	20240620	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0025	20240620	Prélèvement téléphonie	107,88	0,00	N	20240620	20240620		
+F01	Financier	64	20240620	510001	Banque	BANQUE	Banque	F-0025	20240620	Prélèvement téléphonie	0,00	107,88			20240620		
+F01	Financier	65	20240625	164	Emprunts auprès des établissements de crédit			F-0029	20240625	Échéance emprunt BPO	1194,10	0,00			20240625		
+F01	Financier	65	20240625	6611	Intérêts des emprunts et dettes			F-0029	20240625	Échéance emprunt BPO	38,30	0,00			20240625		
+F01	Financier	65	20240625	510001	Banque	BANQUE	Banque	F-0029	20240625	Échéance emprunt BPO	0,00	1232,40			20240625		
+O01	Opération Diverses	66	20240630	641	Rémunérations du personnel			O-SAL06	20240630	Salaires 06/2024	2800,00	0,00			20240630		
+O01	Opération Diverses	66	20240630	645	Charges de sécurité sociale et de prévoyance			O-SAL06	20240630	Salaires 06/2024	1150,40	0,00			20240630		
+O01	Opération Diverses	66	20240630	421	Personnel - Rémunérations dues			O-SAL06	20240630	Salaires 06/2024	0,00	2184,56			20240630		
+O01	Opération Diverses	66	20240630	431	Sécurité sociale			O-SAL06	20240630	Salaires 06/2024	0,00	1765,84			20240630		
+F01	Financier	67	20240630	421	Personnel - Rémunérations dues			F-0027	20240630	Virement des salaires	2184,56	0,00			20240630		
+F01	Financier	67	20240630	510001	Banque	BANQUE	Banque	F-0027	20240630	Virement des salaires	0,00	2184,56			20240630		
+A01	Achat	68	20240701	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0016	20240701	Loyer 07/2024	1200,00	0,00			20240701		
+A01	Achat	68	20240701	445661	TVA  France métropolitaine - Taux normal			A-0016	20240701	Loyer 07/2024	240,00	0,00			20240701		
+A01	Achat	68	20240701	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0016	20240701	Loyer 07/2024	0,00	1440,00	P	20240710	20240701		
+A01	Achat	69	20240703	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0017	20240703	Téléphonie 07/2024	89,90	0,00			20240703		
+A01	Achat	69	20240703	445661	TVA  France métropolitaine - Taux normal			A-0017	20240703	Téléphonie 07/2024	17,98	0,00			20240703		
+A01	Achat	69	20240703	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0017	20240703	Téléphonie 07/2024	0,00	107,88	Q	20240720	20240703		
+V01	Vente	70	20240705	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	V24-0010	20240705	Mission de conseil 07/2024	2895,00	0,00	AL	20240809	20240705		
+V01	Vente	70	20240705	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0010	20240705	Mission de conseil 07/2024	0,00	2412,50			20240705		
+V01	Vente	70	20240705	44571	TVA  France métropolitaine - Taux normal			V24-0010	20240705	Mission de conseil 07/2024	0,00	482,50			20240705		
+F01	Financier	71	20240710	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0030	20240710	Prélèvement loyer	1440,00	0,00	P	20240710	20240710		
+F01	Financier	71	20240710	510001	Banque	BANQUE	Banque	F-0030	20240710	Prélèvement loyer	0,00	1440,00			20240710		
+F01	Financier	72	20240710	510001	Banque	BANQUE	Banque	F-0064	20240710	Règlement V24-0008	2700,00	0,00			20240710		
+F01	Financier	72	20240710	4100003	Brise Marine SAS	BRISEMAR	Brise Marine SAS	F-0064	20240710	Règlement V24-0008	0,00	2700,00	AJ	20240710	20240710		
+F01	Financier	73	20240712	4000004	Papeterie Nantaise	PAPETERIE	Papeterie Nantaise	F-0026	20240712	Virement Papeterie Nantaise	384,36	0,00	O	20240712	20240712		
+F01	Financier	73	20240712	510001	Banque	BANQUE	Banque	F-0026	20240712	Virement Papeterie Nantaise	0,00	384,36			20240712		
+F01	Financier	74	20240720	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0031	20240720	Prélèvement téléphonie	107,88	0,00	Q	20240720	20240720		
+F01	Financier	74	20240720	510001	Banque	BANQUE	Banque	F-0031	20240720	Prélèvement téléphonie	0,00	107,88			20240720		
+F01	Financier	75	20240720	510001	Banque	BANQUE	Banque	F-0065	20240720	Règlement V24-0009	367,77	0,00			20240720		
+F01	Financier	75	20240720	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	F-0065	20240720	Règlement V24-0009	0,00	367,77	AK	20240720	20240720		
+F01	Financier	76	20240725	164	Emprunts auprès des établissements de crédit			F-0033	20240725	Échéance emprunt BPO	1196,45	0,00			20240725		
+F01	Financier	76	20240725	6611	Intérêts des emprunts et dettes			F-0033	20240725	Échéance emprunt BPO	35,95	0,00			20240725		
+F01	Financier	76	20240725	510001	Banque	BANQUE	Banque	F-0033	20240725	Échéance emprunt BPO	0,00	1232,40			20240725		
+O01	Opération Diverses	77	20240731	641	Rémunérations du personnel			O-SAL07	20240731	Salaires 07/2024	2800,00	0,00			20240731		
+O01	Opération Diverses	77	20240731	645	Charges de sécurité sociale et de prévoyance			O-SAL07	20240731	Salaires 07/2024	1150,40	0,00			20240731		
+O01	Opération Diverses	77	20240731	421	Personnel - Rémunérations dues			O-SAL07	20240731	Salaires 07/2024	0,00	2184,56			20240731		
+O01	Opération Diverses	77	20240731	431	Sécurité sociale			O-SAL07	20240731	Salaires 07/2024	0,00	1765,84			20240731		
+F01	Financier	78	20240731	421	Personnel - Rémunérations dues			F-0032	20240731	Virement des salaires	2184,56	0,00			20240731		
+F01	Financier	78	20240731	510001	Banque	BANQUE	Banque	F-0032	20240731	Virement des salaires	0,00	2184,56			20240731		
+A01	Achat	79	20240801	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0018	20240801	Loyer 08/2024	1200,00	0,00			20240801		
+A01	Achat	79	20240801	445661	TVA  France métropolitaine - Taux normal			A-0018	20240801	Loyer 08/2024	240,00	0,00			20240801		
+A01	Achat	79	20240801	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0018	20240801	Loyer 08/2024	0,00	1440,00	R	20240810	20240801		
+A01	Achat	80	20240803	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0019	20240803	Téléphonie 08/2024	89,90	0,00			20240803		
+A01	Achat	80	20240803	445661	TVA  France métropolitaine - Taux normal			A-0019	20240803	Téléphonie 08/2024	17,98	0,00			20240803		
+A01	Achat	80	20240803	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0019	20240803	Téléphonie 08/2024	0,00	107,88	S	20240820	20240803		
+V01	Vente	81	20240805	4100005	Dune Évènements	DUNE	Dune Évènements	V24-0011	20240805	Mission de conseil 08/2024	3090,00	0,00	AM	20240909	20240805		
+V01	Vente	81	20240805	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0011	20240805	Mission de conseil 08/2024	0,00	2575,00			20240805		
+V01	Vente	81	20240805	44571	TVA  France métropolitaine - Taux normal			V24-0011	20240805	Mission de conseil 08/2024	0,00	515,00			20240805		
+F01	Financier	82	20240809	510001	Banque	BANQUE	Banque	F-0066	20240809	Règlement V24-0010	2895,00	0,00			20240809		
+F01	Financier	82	20240809	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	F-0066	20240809	Règlement V24-0010	0,00	2895,00	AL	20240809	20240809		
+F01	Financier	83	20240810	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0034	20240810	Prélèvement loyer	1440,00	0,00	R	20240810	20240810		
+F01	Financier	83	20240810	510001	Banque	BANQUE	Banque	F-0034	20240810	Prélèvement loyer	0,00	1440,00			20240810		
+V01	Vente	84	20240815	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	V24-0012	20240815	Vente d'ouvrages	420,31	0,00	AN	20240919	20240815		
+V01	Vente	84	20240815	707	Ventes de marchandises	LIVRES	Ouvrages et supports	V24-0012	20240815	Vente d'ouvrages	0,00	398,40			20240815		
+V01	Vente	84	20240815	44572	TVA 5,5% - France métropolitaine - Taux réduit			V24-0012	20240815	Vente d'ouvrages	0,00	21,91			20240815		
+F01	Financier	85	20240820	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0035	20240820	Prélèvement téléphonie	107,88	0,00	S	20240820	20240820		
+F01	Financier	85	20240820	510001	Banque	BANQUE	Banque	F-0035	20240820	Prélèvement téléphonie	0,00	107,88			20240820		
+F01	Financier	86	20240825	164	Emprunts auprès des établissements de crédit			F-0037	20240825	Échéance emprunt BPO	1198,80	0,00			20240825		
+F01	Financier	86	20240825	6611	Intérêts des emprunts et dettes			F-0037	20240825	Échéance emprunt BPO	33,60	0,00			20240825		
+F01	Financier	86	20240825	510001	Banque	BANQUE	Banque	F-0037	20240825	Échéance emprunt BPO	0,00	1232,40			20240825		
+O01	Opération Diverses	87	20240831	641	Rémunérations du personnel			O-SAL08	20240831	Salaires 08/2024	2800,00	0,00			20240831		
+O01	Opération Diverses	87	20240831	645	Charges de sécurité sociale et de prévoyance			O-SAL08	20240831	Salaires 08/2024	1150,40	0,00			20240831		
+O01	Opération Diverses	87	20240831	421	Personnel - Rémunérations dues			O-SAL08	20240831	Salaires 08/2024	0,00	2184,56			20240831		
+O01	Opération Diverses	87	20240831	431	Sécurité sociale			O-SAL08	20240831	Salaires 08/2024	0,00	1765,84			20240831		
+F01	Financier	88	20240831	421	Personnel - Rémunérations dues			F-0036	20240831	Virement des salaires	2184,56	0,00			20240831		
+F01	Financier	88	20240831	510001	Banque	BANQUE	Banque	F-0036	20240831	Virement des salaires	0,00	2184,56			20240831		
+A01	Achat	89	20240901	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0020	20240901	Loyer 09/2024	1200,00	0,00			20240901		
+A01	Achat	89	20240901	445661	TVA  France métropolitaine - Taux normal			A-0020	20240901	Loyer 09/2024	240,00	0,00			20240901		
+A01	Achat	89	20240901	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0020	20240901	Loyer 09/2024	0,00	1440,00	T	20240910	20240901		
+A01	Achat	90	20240903	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0021	20240903	Téléphonie 09/2024	89,90	0,00			20240903		
+A01	Achat	90	20240903	445661	TVA  France métropolitaine - Taux normal			A-0021	20240903	Téléphonie 09/2024	17,98	0,00			20240903		
+A01	Achat	90	20240903	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0021	20240903	Téléphonie 09/2024	0,00	107,88	U	20240920	20240903		
+V01	Vente	91	20240905	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	V24-0013	20240905	Mission de conseil 09/2024	3150,00	0,00	AO	20241010	20240905		
+V01	Vente	91	20240905	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0013	20240905	Mission de conseil 09/2024	0,00	2625,00			20240905		
+V01	Vente	91	20240905	44571	TVA  France métropolitaine - Taux normal			V24-0013	20240905	Mission de conseil 09/2024	0,00	525,00			20240905		
+F01	Financier	92	20240909	510001	Banque	BANQUE	Banque	F-0067	20240909	Règlement V24-0011	3090,00	0,00			20240909		
+F01	Financier	92	20240909	4100005	Dune Évènements	DUNE	Dune Évènements	F-0067	20240909	Règlement V24-0011	0,00	3090,00	AM	20240909	20240909		
+F01	Financier	93	20240910	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0038	20240910	Prélèvement loyer	1440,00	0,00	T	20240910	20240910		
+F01	Financier	93	20240910	510001	Banque	BANQUE	Banque	F-0038	20240910	Prélèvement loyer	0,00	1440,00			20240910		
+A01	Achat	94	20240915	6061	Fournitures non stockables	FOURNIT	Fournitures de bureau	A-0022	20240915	Fournitures de bureau	357,80	0,00			20240915		
+A01	Achat	94	20240915	445661	TVA  France métropolitaine - Taux normal			A-0022	20240915	Fournitures de bureau	71,56	0,00			20240915		
+A01	Achat	94	20240915	4000004	Papeterie Nantaise	PAPETERIE	Papeterie Nantaise	A-0022	20240915	Fournitures de bureau	0,00	429,36	V	20241012	20240915		
+F01	Financier	95	20240915	431	Sécurité sociale			F-0043	20240915	URSSAF trimestre	5297,52	0,00			20240915		
+F01	Financier	95	20240915	510001	Banque	BANQUE	Banque	F-0043	20240915	URSSAF trimestre	0,00	5297,52			20240915		
+F01	Financier	96	20240919	510001	Banque	BANQUE	Banque	F-0068	20240919	Règlement V24-0012	420,31	0,00			20240919		
+F01	Financier	96	20240919	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	F-0068	20240919	Règlement V24-0012	0,00	420,31	AN	20240919	20240919		
+F01	Financier	97	20240920	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0039	20240920	Prélèvement téléphonie	107,88	0,00	U	20240920	20240920		
+F01	Financier	97	20240920	510001	Banque	BANQUE	Banque	F-0039	20240920	Prélèvement téléphonie	0,00	107,88			20240920		
+A01	Achat	98	20240925	6226	Honoraires	HONORAIRE	Honoraires comptables	A-0023	20240925	Honoraires comptables	1500,00	0,00			20240925		
+A01	Achat	98	20240925	445661	TVA  France métropolitaine - Taux normal			A-0023	20240925	Honoraires comptables	300,00	0,00			20240925		
+A01	Achat	98	20240925	4000005	Cabinet Expert & Chiffres	EXPERT	Cabinet Expert & Chiffres	A-0023	20240925	Honoraires comptables	0,00	1800,00	W	20241108	20240925		
+F01	Financier	99	20240925	164	Emprunts auprès des établissements de crédit			F-0044	20240925	Échéance emprunt BPO	1201,15	0,00			20240925		
+F01	Financier	99	20240925	6611	Intérêts des emprunts et dettes			F-0044	20240925	Échéance emprunt BPO	31,25	0,00			20240925		
+F01	Financier	99	20240925	510001	Banque	BANQUE	Banque	F-0044	20240925	Échéance emprunt BPO	0,00	1232,40			20240925		
+O01	Opération Diverses	100	20240930	641	Rémunérations du personnel			O-SAL09	20240930	Salaires 09/2024	2800,00	0,00			20240930		
+O01	Opération Diverses	100	20240930	645	Charges de sécurité sociale et de prévoyance			O-SAL09	20240930	Salaires 09/2024	1150,40	0,00			20240930		
+O01	Opération Diverses	100	20240930	421	Personnel - Rémunérations dues			O-SAL09	20240930	Salaires 09/2024	0,00	2184,56			20240930		
+O01	Opération Diverses	100	20240930	431	Sécurité sociale			O-SAL09	20240930	Salaires 09/2024	0,00	1765,84			20240930		
+F01	Financier	101	20240930	421	Personnel - Rémunérations dues			F-0042	20240930	Virement des salaires	2184,56	0,00			20240930		
+F01	Financier	101	20240930	510001	Banque	BANQUE	Banque	F-0042	20240930	Virement des salaires	0,00	2184,56			20240930		
+A01	Achat	102	20241001	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0024	20241001	Loyer 10/2024	1200,00	0,00			20241001		
+A01	Achat	102	20241001	445661	TVA  France métropolitaine - Taux normal			A-0024	20241001	Loyer 10/2024	240,00	0,00			20241001		
+A01	Achat	102	20241001	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0024	20241001	Loyer 10/2024	0,00	1440,00	X	20241010	20241001		
+A01	Achat	103	20241003	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0025	20241003	Téléphonie 10/2024	89,90	0,00			20241003		
+A01	Achat	103	20241003	445661	TVA  France métropolitaine - Taux normal			A-0025	20241003	Téléphonie 10/2024	17,98	0,00			20241003		
+A01	Achat	103	20241003	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0025	20241003	Téléphonie 10/2024	0,00	107,88	Y	20241020	20241003		
+V01	Vente	104	20241005	4100003	Brise Marine SAS	BRISEMAR	Brise Marine SAS	V24-0014	20241005	Mission de conseil 10/2024	3345,00	0,00	AP	20241109	20241005		
+V01	Vente	104	20241005	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0014	20241005	Mission de conseil 10/2024	0,00	2787,50			20241005		
+V01	Vente	104	20241005	44571	TVA  France métropolitaine - Taux normal			V24-0014	20241005	Mission de conseil 10/2024	0,00	557,50			20241005		
+F01	Financier	105	20241010	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0045	20241010	Prélèvement loyer	1440,00	0,00	X	20241010	20241010		
+F01	Financier	105	20241010	510001	Banque	BANQUE	Banque	F-0045	20241010	Prélèvement loyer	0,00	1440,00			20241010		
+F01	Financier	106	20241010	510001	Banque	BANQUE	Banque	F-0069	20241010	Règlement V24-0013	3150,00	0,00			20241010		
+F01	Financier	106	20241010	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	F-0069	20241010	Règlement V24-0013	0,00	3150,00	AO	20241010	20241010		
+F01	Financier	107	20241012	4000004	Papeterie Nantaise	PAPETERIE	Papeterie Nantaise	F-0040	20241012	Virement Papeterie Nantaise	429,36	0,00	V	20241012	20241012		
+F01	Financier	107	20241012	510001	Banque	BANQUE	Banque	F-0040	20241012	Virement Papeterie Nantaise	0,00	429,36			20241012		
+V01	Vente	108	20241015	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	V24-0015	20241015	Vente d'ouvrages	472,85	0,00	AQ	20241119	20241015		
+V01	Vente	108	20241015	707	Ventes de marchandises	LIVRES	Ouvrages et supports	V24-0015	20241015	Vente d'ouvrages	0,00	448,20			20241015		
+V01	Vente	108	20241015	44572	TVA 5,5% - France métropolitaine - Taux réduit			V24-0015	20241015	Vente d'ouvrages	0,00	24,65			20241015		
+F01	Financier	109	20241020	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0046	20241020	Prélèvement téléphonie	107,88	0,00	Y	20241020	20241020		
+F01	Financier	109	20241020	510001	Banque	BANQUE	Banque	F-0046	20241020	Prélèvement téléphonie	0,00	107,88			20241020		
+F01	Financier	110	20241025	164	Emprunts auprès des établissements de crédit			F-0048	20241025	Échéance emprunt BPO	1203,50	0,00			20241025		
+F01	Financier	110	20241025	6611	Intérêts des emprunts et dettes			F-0048	20241025	Échéance emprunt BPO	28,90	0,00			20241025		
+F01	Financier	110	20241025	510001	Banque	BANQUE	Banque	F-0048	20241025	Échéance emprunt BPO	0,00	1232,40			20241025		
+O01	Opération Diverses	111	20241031	641	Rémunérations du personnel			O-SAL10	20241031	Salaires 10/2024	2800,00	0,00			20241031		
+O01	Opération Diverses	111	20241031	645	Charges de sécurité sociale et de prévoyance			O-SAL10	20241031	Salaires 10/2024	1150,40	0,00			20241031		
+O01	Opération Diverses	111	20241031	421	Personnel - Rémunérations dues			O-SAL10	20241031	Salaires 10/2024	0,00	2184,56			20241031		
+O01	Opération Diverses	111	20241031	431	Sécurité sociale			O-SAL10	20241031	Salaires 10/2024	0,00	1765,84			20241031		
+F01	Financier	112	20241031	421	Personnel - Rémunérations dues			F-0047	20241031	Virement des salaires	2184,56	0,00			20241031		
+F01	Financier	112	20241031	510001	Banque	BANQUE	Banque	F-0047	20241031	Virement des salaires	0,00	2184,56			20241031		
+A01	Achat	113	20241101	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0026	20241101	Loyer 11/2024	1200,00	0,00			20241101		
+A01	Achat	113	20241101	445661	TVA  France métropolitaine - Taux normal			A-0026	20241101	Loyer 11/2024	240,00	0,00			20241101		
+A01	Achat	113	20241101	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0026	20241101	Loyer 11/2024	0,00	1440,00	Z	20241110	20241101		
+A01	Achat	114	20241103	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0027	20241103	Téléphonie 11/2024	89,90	0,00			20241103		
+A01	Achat	114	20241103	445661	TVA  France métropolitaine - Taux normal			A-0027	20241103	Téléphonie 11/2024	17,98	0,00			20241103		
+A01	Achat	114	20241103	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0027	20241103	Téléphonie 11/2024	0,00	107,88	AA	20241120	20241103		
+V01	Vente	115	20241105	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	V24-0016	20241105	Mission de conseil 11/2024	3540,00	0,00			20241105		
+V01	Vente	115	20241105	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0016	20241105	Mission de conseil 11/2024	0,00	2950,00			20241105		
+V01	Vente	115	20241105	44571	TVA  France métropolitaine - Taux normal			V24-0016	20241105	Mission de conseil 11/2024	0,00	590,00			20241105		
+F01	Financier	116	20241108	4000005	Cabinet Expert & Chiffres	EXPERT	Cabinet Expert & Chiffres	F-0041	20241108	Virement Expert & Chiffres	1800,00	0,00	W	20241108	20241108		
+F01	Financier	116	20241108	510001	Banque	BANQUE	Banque	F-0041	20241108	Virement Expert & Chiffres	0,00	1800,00			20241108		
+F01	Financier	117	20241109	510001	Banque	BANQUE	Banque	F-0070	20241109	Règlement V24-0014	1672,50	0,00			20241109		
+F01	Financier	117	20241109	4100003	Brise Marine SAS	BRISEMAR	Brise Marine SAS	F-0070	20241109	Règlement V24-0014	0,00	1672,50	AP	20241109	20241109		
+F01	Financier	118	20241110	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0049	20241110	Prélèvement loyer	1440,00	0,00	Z	20241110	20241110		
+F01	Financier	118	20241110	510001	Banque	BANQUE	Banque	F-0049	20241110	Prélèvement loyer	0,00	1440,00			20241110		
+F01	Financier	119	20241119	510001	Banque	BANQUE	Banque	F-0071	20241119	Règlement V24-0015	472,85	0,00			20241119		
+F01	Financier	119	20241119	4100004	Cèdre & Associés	CEDRE	Cèdre & Associés	F-0071	20241119	Règlement V24-0015	0,00	472,85	AQ	20241119	20241119		
+F01	Financier	120	20241120	4000003	Telcom Ouest	TELCOM	Telcom Ouest	F-0050	20241120	Prélèvement téléphonie	107,88	0,00	AA	20241120	20241120		
+F01	Financier	120	20241120	510001	Banque	BANQUE	Banque	F-0050	20241120	Prélèvement téléphonie	0,00	107,88			20241120		
+F01	Financier	121	20241125	164	Emprunts auprès des établissements de crédit			F-0052	20241125	Échéance emprunt BPO	1205,85	0,00			20241125		
+F01	Financier	121	20241125	6611	Intérêts des emprunts et dettes			F-0052	20241125	Échéance emprunt BPO	26,55	0,00			20241125		
+F01	Financier	121	20241125	510001	Banque	BANQUE	Banque	F-0052	20241125	Échéance emprunt BPO	0,00	1232,40			20241125		
+O01	Opération Diverses	122	20241130	641	Rémunérations du personnel			O-SAL11	20241130	Salaires 11/2024	2800,00	0,00			20241130		
+O01	Opération Diverses	122	20241130	645	Charges de sécurité sociale et de prévoyance			O-SAL11	20241130	Salaires 11/2024	1150,40	0,00			20241130		
+O01	Opération Diverses	122	20241130	421	Personnel - Rémunérations dues			O-SAL11	20241130	Salaires 11/2024	0,00	2184,56			20241130		
+O01	Opération Diverses	122	20241130	431	Sécurité sociale			O-SAL11	20241130	Salaires 11/2024	0,00	1765,84			20241130		
+F01	Financier	123	20241130	421	Personnel - Rémunérations dues			F-0051	20241130	Virement des salaires	2184,56	0,00			20241130		
+F01	Financier	123	20241130	510001	Banque	BANQUE	Banque	F-0051	20241130	Virement des salaires	0,00	2184,56			20241130		
+A01	Achat	124	20241201	6132	Locations immobilières	LOYER	Loyer des bureaux	A-0028	20241201	Loyer 12/2024	1200,00	0,00			20241201		
+A01	Achat	124	20241201	445661	TVA  France métropolitaine - Taux normal			A-0028	20241201	Loyer 12/2024	240,00	0,00			20241201		
+A01	Achat	124	20241201	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	A-0028	20241201	Loyer 12/2024	0,00	1440,00	AB	20241210	20241201		
+A01	Achat	125	20241203	626	Frais postaux et de télécommunications	TELEPHONE	Téléphonie et internet	A-0029	20241203	Téléphonie 12/2024	89,90	0,00			20241203		
+A01	Achat	125	20241203	445661	TVA  France métropolitaine - Taux normal			A-0029	20241203	Téléphonie 12/2024	17,98	0,00			20241203		
+A01	Achat	125	20241203	4000003	Telcom Ouest	TELCOM	Telcom Ouest	A-0029	20241203	Téléphonie 12/2024	0,00	107,88			20241203		
+V01	Vente	126	20241205	4100005	Dune Évènements	DUNE	Dune Évènements	V24-0017	20241205	Mission de conseil 12/2024	3600,00	0,00			20241205		
+V01	Vente	126	20241205	706	Prestations de services	CONSEIL	Conseil et accompagnement	V24-0017	20241205	Mission de conseil 12/2024	0,00	3000,00			20241205		
+V01	Vente	126	20241205	44571	TVA  France métropolitaine - Taux normal			V24-0017	20241205	Mission de conseil 12/2024	0,00	600,00			20241205		
+F01	Financier	127	20241210	4000002	Locapro Immobilier	LOCAPRO	Locapro Immobilier	F-0053	20241210	Prélèvement loyer	1440,00	0,00	AB	20241210	20241210		
+F01	Financier	127	20241210	510001	Banque	BANQUE	Banque	F-0053	20241210	Prélèvement loyer	0,00	1440,00			20241210		
+V01	Vente	128	20241215	4100002	Librairie L'Aubépine	AUBEPINE	Librairie L'Aubépine	V24-0018	20241215	Vente d'ouvrages	525,39	0,00			20241215		
+V01	Vente	128	20241215	707	Ventes de marchandises	LIVRES	Ouvrages et supports	V24-0018	20241215	Vente d'ouvrages	0,00	498,00			20241215		
+V01	Vente	128	20241215	44572	TVA 5,5% - France métropolitaine - Taux réduit			V24-0018	20241215	Vente d'ouvrages	0,00	27,39			20241215		
+A01	Achat	129	20241215	6061	Fournitures non stockables	FOURNIT	Fournitures de bureau	A-0030	20241215	Fournitures de bureau	395,30	0,00			20241215		
+A01	Achat	129	20241215	445661	TVA  France métropolitaine - Taux normal			A-0030	20241215	Fournitures de bureau	79,06	0,00			20241215		
+A01	Achat	129	20241215	4000004	Papeterie Nantaise	PAPETERIE	Papeterie Nantaise	A-0030	20241215	Fournitures de bureau	0,00	474,36			20241215		
+F01	Financier	130	20241215	431	Sécurité sociale			F-0055	20241215	URSSAF trimestre	5297,52	0,00			20241215		
+F01	Financier	130	20241215	510001	Banque	BANQUE	Banque	F-0055	20241215	URSSAF trimestre	0,00	5297,52			20241215		
+F01	Financier	131	20241225	164	Emprunts auprès des établissements de crédit			F-0056	20241225	Échéance emprunt BPO	1208,20	0,00			20241225		
+F01	Financier	131	20241225	6611	Intérêts des emprunts et dettes			F-0056	20241225	Échéance emprunt BPO	24,20	0,00			20241225		
+F01	Financier	131	20241225	510001	Banque	BANQUE	Banque	F-0056	20241225	Échéance emprunt BPO	0,00	1232,40			20241225		
+O01	Opération Diverses	132	20241231	641	Rémunérations du personnel			O-SAL12	20241231	Salaires 12/2024	2800,00	0,00			20241231		
+O01	Opération Diverses	132	20241231	645	Charges de sécurité sociale et de prévoyance			O-SAL12	20241231	Salaires 12/2024	1150,40	0,00			20241231		
+O01	Opération Diverses	132	20241231	421	Personnel - Rémunérations dues			O-SAL12	20241231	Salaires 12/2024	0,00	2184,56			20241231		
+O01	Opération Diverses	132	20241231	431	Sécurité sociale			O-SAL12	20241231	Salaires 12/2024	0,00	1765,84			20241231		
+F01	Financier	133	20241231	421	Personnel - Rémunérations dues			F-0054	20241231	Virement des salaires	2184,56	0,00			20241231		
+F01	Financier	133	20241231	510001	Banque	BANQUE	Banque	F-0054	20241231	Virement des salaires	0,00	2184,56			20241231		

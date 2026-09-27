@@ -1,0 +1,193 @@
+= partiduo-migrate
+:toc: left
+:toc-title: Table des matières
+:icons: font
+
+Reprise d'un dossier comptable dans une instance Partiduo *neuve*
+(ADR-001 D5). Deux sources :
+
+* un *FEC* (fichier des écritures comptables, article A47 A-1 du livre des
+  procédures fiscales), source prioritaire : plan comptable, journaux,
+  écritures, tiers, lettrage ;
+* une *base NOALYSS* en DBVERSION 208, pour ce que le FEC ne porte pas :
+  fiches complètes, paramètres de TVA, exercices et périodes closes,
+  échéances, pièces jointes (l'analytique est relevée en annexe tant que le
+  module n'a pas de contrat, lot 5). Les utilisateurs de NOALYSS, leurs
+  droits et leurs secrets ne sont *jamais* lus : chacun s'enrôle sur
+  l'instance (ADR-002).
+
+L'outil écrit *exclusivement* par le contrat public `Partiduo::Api` du cœur
+(ADR-003 D6) — aucune requête SQL sur les tables de l'instance : les
+contrôles d'intégrité (équilibre, périodes, pièces uniques, lettrage)
+s'appliquent aux données reprises comme à la saisie. Une spec d'architecture
+le vérifie (`spec/architecture/boundary_spec.cr`).
+
+== Rapport de réconciliation
+
+Chaque reprise produit un rapport, en AsciiDoc et en CSV, qui compare les
+chiffres de la source (« avant ») à ceux relus dans l'instance (« après ») :
+
+* balance générale (lignes, débit, crédit, solde par compte) ;
+* balance âgée des tiers (non échu, 1 à 30 jours, 31 à 60, plus de 60, reste
+  dû), avec les règles du relevé de l'instance : lignes non lettrées et
+  reliquat des lettrages partiels, référence = échéance, sinon date ;
+* totaux par journal et par période (nombre d'écritures, débit, crédit) ;
+* totaux généraux.
+
+*Tout écart, même d'un centime, est un échec* : la reprise est annulée dans
+son ensemble (une seule transaction), l'instance reste neuve, le code de
+sortie est 1. Il en va de même pour toute anomalie bloquante (écriture,
+lettrage, compte, journal ou exercice refusé par l'instance). Les
+avertissements (détail de fiche refusé et conservé en attribut, taux de TVA,
+pièce jointe) n'empêchent pas la reprise, sauf avec `--strict`.
+
+Fichiers écrits dans le dossier `--report` :
+
+[cols="1,3",options="header"]
+|===
+|Fichier |Contenu
+|`rapport.adoc` |rapport lisible : source (empreinte SHA-256 du FEC), instance, verdict, synthèse, écarts, tableaux, anomalies, correspondances, données non reprises
+|`balance-generale.csv` |par compte : avant, après, statut
+|`balance-agee.csv` |par fiche de tiers : tranches avant, après, statut
+|`journaux.csv`, `periodes.csv` |totaux par journal et par mois
+|`ecarts.csv` |chaque valeur en écart (vide si la reprise réconcilie)
+|`anomalies.csv` |refus de l'instance, bloquants ou non
+|`correspondances.csv` |identifiants changés (comptes normalisés, codes de journal, quick codes, pièces rendues uniques)
+|`non-repris.csv` |analytique, pièces supplémentaires, pièces sans écriture
+|===
+
+== Installation
+
+[source,sh]
+----
+cd prod-crystal/partiduo/partiduo-migrate
+SKIP_MARTEN_CLI_PRECOMPILATION=1 shards install
+shards build partiduo-migrate                     # bin/partiduo-migrate
+----
+
+`partiduo-app` est une dépendance `path:` (`../partiduo-app`) ; le fichier
+`shard.override.yml` force les sources locales des shards maison, comme dans
+les autres dépôts.
+
+== Utilisation
+
+L'instance cible est celle de l'environnement, comme pour toute commande
+d'une instance : `DATABASE_URL` (socket Unix), `PARTIDUO_MODULES` (la
+Comptabilité doit être active), `PARTIDUO_MEDIA_ROOT` (pièces jointes).
+Elle doit être *provisionnée* (`bin/partiduo-provision` de `partiduo-app`) et
+*sans écriture*.
+
+[source,sh]
+----
+export DATABASE_URL='postgres:///partiduo_dossier?host=/tmp'
+export PARTIDUO_MODULES=accounting,invoicing PARTIDUO_MEDIA_ROOT=/srv/partiduo/dossier/media
+
+# Contrôle d'un FEC, sans rien écrire
+bin/partiduo-migrate check --fec 732829320FEC20241231.txt
+
+# Essai à blanc : tout est fait, réconcilié, puis annulé
+bin/partiduo-migrate import --fec 732829320FEC20241231.txt --dry-run --report rapport/
+
+# Reprise d'un FEC
+bin/partiduo-migrate import --fec 732829320FEC20241231.txt --report rapport/
+
+# Reprise d'une base NOALYSS (écritures comprises)
+bin/partiduo-migrate import --noalyss 'postgres:///dossier_noalyss?host=/tmp' --report rapport/
+
+# FEC complété par la base NOALYSS dont il est issu
+bin/partiduo-migrate import --fec F.txt --noalyss 'postgres:///dossier_noalyss?host=/tmp' --report rapport/
+
+# FEC d'une base NOALYSS (nom réglementaire SIRENFECAAAAMMJJ.txt)
+bin/partiduo-migrate export-fec --noalyss 'postgres:///dossier_noalyss?host=/tmp' --output .
+----
+
+Codes de sortie : `0` reprise réussie et réconciliée ; `1` échec (écart,
+anomalie bloquante, instance non neuve) ; `2` source illisible, FEC non
+conforme ou usage incorrect.
+
+=== Lecture du FEC
+
+* Séparateur : tabulation ou barre verticale, reconnu sur l'en-tête.
+* Encodage : BOM UTF-8 ou UTF-16, UTF-8 valide, sinon ISO 8859-15 ;
+  `--encoding` l'impose (`utf-8`, `iso-8859-15`, `windows-1252`…).
+* Zones : les dix-huit de l'arrêté, par leur nom (casse indifférente) ;
+  `Montant` + `Sens` accepté à la place de `Debit` / `Credit` ;
+  `Montantdevise` / `Idevise` facultatives ; une zone d'échéance
+  (`DateEcheance`) est reprise si elle existe.
+* Dates `AAAAMMJJ` ; montants à virgule (point, blancs, signe tolérés).
+* Écritures : lignes d'un même `EcritureNum` dans un même `JournalCode` ;
+  chacune doit être équilibrée. Lignes à débit et crédit nuls ignorées
+  (comptées au rapport).
+* Tout défaut est signalé avec son numéro de ligne ; un FEC qui en a n'est
+  pas importé.
+
+=== Ce que la reprise crée
+
+* Comptes absents du plan de l'instance (type de la source NOALYSS, sinon
+  déduit de la classe) ; un compte existant mouvementé mais non utilisable en
+  saisie est rendu utilisable.
+* Exercices de douze mois couvrant les écritures (premier mois :
+  `--fiscal-start`, sinon le mois suivant la date de clôture du nom du FEC,
+  sinon janvier), ou ceux de la base NOALYSS ; ses périodes closes sont
+  fermées après la reprise.
+* Fiches : complètes depuis NOALYSS (catégorie selon le modèle de fiche,
+  colonnes typées, autres attributs en attributs propres `noalyss_<ad_id>`),
+  minimales depuis les comptes auxiliaires du FEC (catégorie selon le
+  compte : 40 fournisseur, 41 client…), rattachées à leur compte.
+* Journaux : ceux de l'instance de même code sont réutilisés ; les autres
+  sont créés (nature de NOALYSS, sinon déduite des écritures ; un journal
+  financier reçoit sa fiche Banque).
+* Écritures par `Partiduo::Api::Accounting.post_entry`, pièce de la source
+  (rendue unique dans le journal au besoin), référence `fec:<journal>:<numéro>`
+  ou `noalyss:<jr_id>`, échéance et pièce jointe.
+* Lettrages par `match_lines`, un par compte et code de lettrage (partiel si
+  débit ≠ crédit).
+
+== Démonstration
+
+`demo/732829320FEC20241231.txt` est un FEC réaliste (exercice 2024 d'une
+société de conseil : à-nouveaux, ventes dont un avoir, achats, extraits
+bancaires, salaires, emprunt ; lettrage, dont un règlement partiel ;
+ISO 8859-15, tabulation). Il est produit à l'identique par :
+
+[source,sh]
+----
+scripts/noalyss-demo                               # base partiduo_noalyss_demo (DBVERSION 208)
+bin/partiduo-migrate export-fec --noalyss 'postgres:///partiduo_noalyss_demo?host=/tmp' --output demo/
+----
+
+`scripts/noalyss-demo` charge les scripts SQL du modèle français de NOALYSS
+(`noalyss-app/include/sql/mod2`), les correctifs 202 à 207, puis
+`scripts/noalyss_demo_data.sql` (fiches, opérations, lettrage, pièces jointes,
+analytique).
+
+Reprise de bout en bout dans une instance neuve :
+
+[source,sh]
+----
+cd ../partiduo-app
+bin/partiduo-provision --name "Atelier Démo SARL" --regime fr --siren 732829320 \
+  --modules accounting,invoicing --database partiduo_m_demo m-demo
+cd ../partiduo-migrate
+DATABASE_URL='postgres:///partiduo_m_demo?host=/tmp' PARTIDUO_MODULES=accounting,invoicing \
+  bin/partiduo-migrate import --fec demo/732829320FEC20241231.txt \
+  --noalyss 'postgres:///partiduo_noalyss_demo?host=/tmp' --report rapport-demo/
+----
+
+== Specs
+
+Chaque agent ou job utilise sa propre base de test (nom contenant `test`),
+reconstruite par les migrations du cœur ; la base NOALYSS de démonstration
+est créée par `scripts/noalyss-demo` si elle manque (`NOALYSS_DEMO_DB`, défaut
+`partiduo_noalyss_demo`).
+
+[source,sh]
+----
+createdb --encoding=UTF8 partiduo_test_migrate     # une fois
+DATABASE_URL='postgres:///partiduo_test_migrate?host=/tmp' crystal spec
+crystal tool format src spec config && ameba
+----
+
+== Licence
+
+AGPL-3.0-or-later (fichier `LICENSE`).

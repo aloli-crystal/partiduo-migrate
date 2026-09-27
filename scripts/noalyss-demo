@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Crée une base NOALYSS de démonstration en DBVERSION 208 : scripts SQL du
+# modèle français (noalyss-app/include/sql/mod2), correctifs 202 à 207, puis
+# un exercice 2024 d'écritures (scripts/noalyss_demo_data.sql).
+#
+#   scripts/noalyss-demo [base]          # défaut : partiduo_noalyss_demo
+#
+# Variables : NOALYSS_APP (défaut ../../../prod-github/noalyss/noalyss-app
+# depuis ce dépôt), PGHOST (socket Unix, défaut /tmp).
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+database="${1:-partiduo_noalyss_demo}"
+noalyss="${NOALYSS_APP:-$here/../../../../prod-github/noalyss/noalyss-app}"
+sql="$noalyss/include/sql"
+export PGHOST="${PGHOST:-/tmp}"
+
+case "$database" in
+  partiduo_*) ;;
+  *) echo "noalyss-demo : le nom de la base doit commencer par partiduo_ ($database)" >&2; exit 2 ;;
+esac
+[ -f "$sql/mod2/schema.sql" ] || { echo "noalyss-demo : $sql/mod2/schema.sql introuvable (NOALYSS_APP)" >&2; exit 2; }
+
+export PGOPTIONS='-c client_min_messages=warning'
+run() { psql -X -q -v ON_ERROR_STOP=1 -d "$database" "$@" >/dev/null; }
+
+dropdb --if-exists "$database"
+createdb --encoding=UTF8 "$database"
+run -f "$sql/mod2/schema.sql"
+run -f "$sql/mod2/data.sql"
+run -f "$sql/mod2/constraint.sql"
+for version in 202 203 204 205 206 207; do
+  run -f "$sql/patch/upgrade$version.sql" 2>/dev/null
+done
+run -f "$here/noalyss_demo_data.sql"
+
+version="$(psql -X -At -d "$database" -c 'select max(val) from version')"
+count="$(psql -X -At -d "$database" -c 'select count(*) from jrn')"
+echo "Base NOALYSS $database : DBVERSION $version, $count opérations."

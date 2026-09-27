@@ -1,0 +1,7 @@
+# Configuration d'Ameba pour partiduo-migrate.
+Globs:
+  - "**/*.cr"
+  - "!lib"
+
+Excluded:
+  - lib/

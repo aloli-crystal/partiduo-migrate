@@ -1,0 +1,33 @@
+name: partiduo-migrate
+version: 0.1.0
+
+description: |
+  Reprise d'un dossier comptable dans une instance Partiduo neuve
+  (ADR-001 D5) : fichier des écritures comptables (FEC, article A47 A-1
+  du LPF) et base NOALYSS en DBVERSION 208. Écrit exclusivement par le
+  contrat Partiduo::Api et produit un rapport de réconciliation au centime.
+
+authors:
+  - Philippe Nénert <it+claude.ai@aloli.fr>
+
+crystal: ">= 1.19.1"
+
+license: AGPL-3.0-or-later
+
+targets:
+  partiduo-migrate:
+    main: src/main.cr
+
+dependencies:
+  # Le cœur : contrat Partiduo::Api, seule surface d'écriture (ADR-003 D6).
+  partiduo:
+    path: ../partiduo-app
+  marten:
+    path: ../../marten
+  pg:
+    github: will/crystal-pg
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: "~> 1.6"

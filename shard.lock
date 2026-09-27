@@ -1,0 +1,111 @@
+# NOTICE: This lockfile contains some overrides from shard.override.yml
+version: 2.0
+shards:
+  ameba:
+    git: https://github.com/crystal-ameba/ameba.git
+    version: 1.7.0
+
+  authn:
+    path: ../../authn
+    version: 0.3.0
+
+  bcrypt:
+    git: https://github.com/jgaskins/bcrypt.git
+    version: 0.1.0+git.commit.4004f17053cba6f2c752ea83162f405143ab541c
+
+  bindata:
+    git: https://github.com/spider-gazelle/bindata.git
+    version: 3.2.1
+
+  db:
+    git: https://github.com/crystal-lang/crystal-db.git
+    version: 0.14.0
+
+  ed25519:
+    git: https://github.com/spider-gazelle/ed25519.git
+    version: 1.1.0
+
+  email:
+    git: https://github.com/arcage/crystal-email.git
+    version: 0.7.1
+
+  i18n:
+    git: https://github.com/crystal-i18n/i18n.git
+    version: 0.2.2
+
+  jose: # Overridden
+    path: ../../jose
+    version: 0.2.0
+
+  jwt:
+    git: https://github.com/crystal-community/jwt.git
+    version: 1.7.2
+
+  marten: # Overridden
+    path: ../../marten
+    version: 0.7.0
+
+  marten_auth:
+    git: https://github.com/martenframework/marten-auth.git
+    version: 0.2.1
+
+  matrix:
+    git: https://github.com/exilor/matrix.git
+    version: 0.1.0+git.commit.db74e62dcc0b65e548bf1a8eda65657310f57152
+
+  msgpack:
+    git: https://github.com/crystal-community/msgpack-crystal.git
+    version: 1.3.5
+
+  openssl_ext:
+    git: https://github.com/spider-gazelle/openssl_ext.git
+    version: 2.8.5
+
+  partiduo: # Overridden
+    path: ../partiduo-app
+    version: 0.1.0
+
+  password-policy: # Overridden
+    path: ../../password-policy
+    version: 0.1.0
+
+  pdf: # Overridden
+    path: ../../pdf
+    version: 1.22.0
+
+  pdf-a:
+    path: ../../pdf-a
+    version: 0.3.0
+
+  pdf-validate:
+    path: ../../pdf-validate
+    version: 0.47.0
+
+  pg:
+    git: https://github.com/will/crystal-pg.git
+    version: 0.30.0
+
+  saml:
+    path: ../../saml
+    version: 1.18.1.3
+
+  stumpy_core:
+    git: https://github.com/stumpycr/stumpy_core.git
+    version: 1.9.1
+
+  stumpy_jpeg:
+    git: https://github.com/stumpycr/stumpy_jpeg.git
+    version: 0.1.0+git.commit.714ad6c1f905cb503c53843cda8285f52592e2c2
+
+  stumpy_png:
+    git: https://github.com/stumpycr/stumpy_png.git
+    version: 5.0.1
+
+  totp:
+    path: ../../totp
+    version: 0.1.0
+
+  webauthn:
+    path: ../../webauthn
+    version: 0.1.0
+
