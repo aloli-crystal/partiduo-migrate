@@ -24,7 +24,7 @@ private def with_noalyss_copy(&)
   status = Process.run(File.join(PartiduoMigrate::SpecSupport::ROOT, "scripts", "noalyss-demo"), [name],
     output: Process::Redirect::Close, error: Process::Redirect::Inherit)
   raise "scripts/noalyss-demo #{name} en échec" unless status.success?
-  yield "postgres:///#{name}?host=/tmp"
+  yield PartiduoMigrate::SpecSupport.database_url(name)
 ensure
   name.try { |base| Process.run("dropdb", ["--if-exists", base]) }
 end

@@ -36,6 +36,19 @@ module PartiduoMigrate
       url
     end
 
+    # URL d'une base de travail `name` sur le même serveur que la base de
+    # démonstration : celui de `NOALYSS_DEMO_URL` (CI, en TCP), sinon la
+    # socket Unix `/tmp`.
+    def self.database_url(name : String) : String
+      if base = ENV["NOALYSS_DEMO_URL"]?.presence
+        uri = URI.parse(base)
+        uri.path = "/#{name}"
+        uri.to_s
+      else
+        "postgres:///#{name}?host=/tmp"
+      end
+    end
+
     def self.report_dir : String
       File.join(Dir.tempdir, "partiduo-migrate-spec-#{Process.pid}-#{Random::Secure.hex(4)}")
     end

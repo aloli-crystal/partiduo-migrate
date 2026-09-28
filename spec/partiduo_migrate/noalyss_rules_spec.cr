@@ -62,7 +62,7 @@ describe "Règles de reprise d'une base NOALYSS" do
     name = "partiduo_test_m_specs_v207"
     Process.run("dropdb", ["--if-exists", name])
     Process.run("createdb", [name]).success?.should be_true
-    url = "postgres:///#{name}?host=/tmp"
+    url = PartiduoMigrate::SpecSupport.database_url(name)
     DB.open(url) do |db|
       db.exec("CREATE TABLE version (val integer)")
       db.exec("INSERT INTO version VALUES (206), (207)")
