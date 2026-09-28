@@ -66,7 +66,7 @@ jobs:
         with:
           crystal: 1.19.1
       - name: Bibliothèques de compilation
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libyaml-dev libssl-dev libgmp-dev libxml2-dev libpcre2-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libyaml-dev libssl-dev libgmp-dev libxml2-dev libpcre2-dev lld
       - name: Client PostgreSQL (scripts/noalyss-demo)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
       - name: Sources SQL de NOALYSS (lecture seule)
@@ -78,4 +78,4 @@ jobs:
       - name: Base NOALYSS de démonstration
         run: scripts/noalyss-demo partiduo_noalyss_demo
       - name: Specs
-        run: crystal spec --order random --no-debug --threads 1
+        run: crystal spec --order random --no-debug --threads 1 --link-flags=-fuse-ld=lld
