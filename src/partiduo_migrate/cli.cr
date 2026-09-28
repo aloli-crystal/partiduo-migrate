@@ -7,10 +7,10 @@ module PartiduoMigrate
   #
   # ```
   # partiduo-migrate import --fec 732829320FEC20241231.txt --report rapport/
-  # partiduo-migrate import --noalyss 'postgres:///dossier?host=/tmp' --report rapport/
-  # partiduo-migrate import --fec F.txt --noalyss URL     # FEC + compléments NOALYSS
+  # partiduo-migrate import --legacy-db 'postgres:///dossier?host=/tmp' --report rapport/
+  # partiduo-migrate import --fec F.txt --legacy-db URL     # FEC + compléments de la base d'origine
   # partiduo-migrate check --fec F.txt                    # contrôle du FEC, sans écrire
-  # partiduo-migrate export-fec --noalyss URL --output .  # FEC d'une base NOALYSS
+  # partiduo-migrate export-fec --legacy-db URL --output .  # FEC d'une base d'origine
   # ```
   #
   # L'instance cible est celle de l'environnement (`DATABASE_URL`,
@@ -29,7 +29,7 @@ module PartiduoMigrate
 
     def initialize(@stdout : IO = STDOUT, @stderr : IO = STDERR)
       @fec = nil.as(String?)
-      @noalyss = nil.as(String?)
+      @legacy_db = nil.as(String?)
       @report = "rapport-reprise"
       @encoding = nil.as(String?)
       @as_of = nil.as(Time?)
@@ -93,7 +93,7 @@ module PartiduoMigrate
         @stderr.puts "partiduo-migrate : #{t("unknown_command", command: command)}\n\n#{usage}"
         EXIT_USAGE
       end
-    rescue ex : OptionParser::Exception | Fec::Error | Noalyss::Error | ArgumentError | File::Error
+    rescue ex : OptionParser::Exception | Fec::Error | Legacy::Error | ArgumentError | File::Error
       # Source illisible (fichier absent, droits) : code 2, comme un FEC
       # non conforme.
       @stderr.puts "partiduo-migrate : #{ex.message}"
@@ -101,13 +101,13 @@ module PartiduoMigrate
     end
 
     def usage : String
-      t("usage", dbversion: Noalyss::DBVERSION, locales: LOCALES.join(", "))
+      t("usage", dbversion: Legacy::DBVERSION, locales: LOCALES.join(", "))
     end
 
     private def parse(args : Array(String), export : Bool = false) : Nil
       parser = OptionParser.new
       parser.on("--fec FILE", "FEC") { |value| @fec = value }
-      parser.on("--noalyss URL", "NOALYSS") { |value| @noalyss = value }
+      parser.on("--legacy-db URL", "legacy database") { |value| @legacy_db = value }
       parser.on("--encoding NAME", "encoding") { |value| @encoding = value }
       parser.on("--report DIR", "report") { |value| @report = value }
       parser.on("--as-of DATE", "as-of") { |value| @as_of = parse_date(value) }
@@ -134,7 +134,7 @@ module PartiduoMigrate
         raise ArgumentError.new(t("unexpected_argument", argument: rest.join(' '))) unless rest.empty?
       end
       parser.parse(args)
-      if !export && @fec.nil? && @noalyss.nil?
+      if !export && @fec.nil? && @legacy_db.nil?
         raise ArgumentError.new(t("source_expected"))
       end
     end
@@ -143,8 +143,8 @@ module PartiduoMigrate
       Fec.parse_date(value) || raise ArgumentError.new(t("date_expected", value: value))
     end
 
-    # Source lue : FEC seul, base NOALYSS seule (écritures comprises), ou FEC
-    # complété par la base NOALYSS (fiches, TVA, exercices, pièces jointes
+    # Source lue : FEC seul, base d'origine seule (écritures comprises), ou FEC
+    # complété par la base d'origine (fiches, TVA, exercices, pièces jointes
     # rapprochées par journal, date et pièce).
     private def load : {Source::Dataset, Array({String, String})}
       details = [] of {String, String}
@@ -165,21 +165,21 @@ module PartiduoMigrate
           raise Fec::Error.new(t("fec_rejected", total: reader.problems.size))
         end
       end
-      noalyss_dataset = @noalyss.try do |url|
-        database = Noalyss::Database.new(url)
+      legacy_dataset = @legacy_db.try do |url|
+        database = Legacy::Database.new(url)
         database.warnings.each do |warning|
-          @stderr.puts "NOALYSS : #{warning}"
+          @stderr.puts "#{t("detail_legacy")} : #{warning}"
           details << {t("detail_warning"), warning}
         end
         database.read
       end
-      if noalyss_dataset
-        details << {t("detail_noalyss"), t("detail_noalyss_value", description: noalyss_dataset.description,
-          dbversion: Noalyss::DBVERSION)}
+      if legacy_dataset
+        details << {t("detail_legacy"), t("detail_legacy_value", description: legacy_dataset.description,
+          dbversion: Legacy::DBVERSION)}
       end
-      if fec_dataset && noalyss_dataset
-        {Complement.merge(fec_dataset, noalyss_dataset), details}
-      elsif dataset = fec_dataset || noalyss_dataset
+      if fec_dataset && legacy_dataset
+        {Complement.merge(fec_dataset, legacy_dataset), details}
+      elsif dataset = fec_dataset || legacy_dataset
         {dataset, details}
       else
         raise ArgumentError.new(t("source_expected"))
@@ -211,7 +211,7 @@ module PartiduoMigrate
       io.puts t("report", path: File.join(@report, "rapport.adoc"), total: files.size)
     end
 
-    # Contrôle d'un FEC (ou d'une base NOALYSS) : lecture, conformité,
+    # Contrôle d'un FEC (ou d'une base d'origine) : lecture, conformité,
     # contrôle de lecture, chiffres « avant ».
     private def check(args : Array(String)) : Int32
       parse(args)
@@ -231,9 +231,9 @@ module PartiduoMigrate
 
     private def export_fec(args : Array(String)) : Int32
       parse(args, export: true)
-      url = @noalyss || raise ArgumentError.new(t("noalyss_expected"))
-      database = Noalyss::Database.new(url)
-      database.warnings.each { |warning| @stderr.puts "NOALYSS : #{warning}" }
+      url = @legacy_db || raise ArgumentError.new(t("legacy_expected"))
+      database = Legacy::Database.new(url)
+      database.warnings.each { |warning| @stderr.puts "#{t("detail_legacy")} : #{warning}" }
       dataset = database.read(with_attachments: false)
       last = dataset.last_date || raise ArgumentError.new(t("no_entries"))
       # Date de clôture du nom : fin de l'exercice de la dernière écriture.

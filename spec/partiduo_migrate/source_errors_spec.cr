@@ -131,22 +131,22 @@ describe "Ligne de commande : sources illisibles et usage" do
     cli("import", "--fec", fec, "--as-of", "2024-02-30")[0].should eq(2)
     cli("import", "--fec", fec, "--inconnue")[0].should eq(2)
     cli("import", "--fec")[0].should eq(2)
-    cli("export-fec")[2].should contain("--noalyss URL attendu")
-    cli("export-fec", "--noalyss", "x", "--separator", ";")[0].should eq(2)
+    cli("export-fec")[2].should contain("--legacy-db URL attendu")
+    cli("export-fec", "--legacy-db", "x", "--separator", ";")[0].should eq(2)
   end
 
-  it "rend le code 2 pour une base NOALYSS injoignable ou d'une autre version" do
-    status, _, stderr = cli("check", "--noalyss", "postgres:///partiduo_absente_#{Random::Secure.hex(4)}?host=/tmp")
+  it "rend le code 2 pour une base d'origine injoignable ou d'une autre version" do
+    status, _, stderr = cli("check", "--legacy-db", "postgres:///partiduo_absente_#{Random::Secure.hex(4)}?host=/tmp")
     status.should eq(2)
-    stderr.should contain("base NOALYSS illisible")
-    # La base de test de Partiduo n'a pas la table `version` de NOALYSS.
-    expect_raises(PartiduoMigrate::Noalyss::Error) { PartiduoMigrate::Noalyss::Database.new(test_database_url).read }
+    stderr.should contain("base d'origine illisible")
+    # La base de test de Partiduo n'a pas la table `version` de l'application d'origine.
+    expect_raises(PartiduoMigrate::Legacy::Error) { PartiduoMigrate::Legacy::Database.new(test_database_url).read }
   end
 
-  it "ne modifie jamais la base NOALYSS lue (session en lecture seule)" do
-    url = PartiduoMigrate::SpecSupport.noalyss_url
+  it "ne modifie jamais la base d'origine lue (session en lecture seule)" do
+    url = PartiduoMigrate::SpecSupport.legacy_url
     before = DB.open(url) { |db| db.query_one("SELECT count(*) FROM jrnx", as: Int64) }
-    PartiduoMigrate::Noalyss::Database.new(url).read(with_attachments: false)
+    PartiduoMigrate::Legacy::Database.new(url).read(with_attachments: false)
     DB.open(url) { |db| db.query_one("SELECT count(*) FROM jrnx", as: Int64) }.should eq(before)
   end
 end

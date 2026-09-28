@@ -4,15 +4,15 @@ require "db"
 require "pg"
 
 module PartiduoMigrate
-  module Noalyss
-    # Version de schéma lue et reprise (`DBVERSION` de noalyss-app).
+  module Legacy
+    # Version de schéma lue et reprise (`DBVERSION` de l'application d'origine).
     DBVERSION = 208
 
     class Error < Exception
     end
 
-    # Lecture d'une base NOALYSS (dossier) en DBVERSION 208, en lecture
-    # seule : écritures (comme la vue `v_fec_operation` de `noalyss-export`,
+    # Lecture d'une base d'origine (dossier) en DBVERSION 208, en lecture
+    # seule : écritures (comme la vue `v_fec_operation` de l'export FEC d'origine,
     # lettrage et échéance en plus), plan comptable, journaux, fiches
     # complètes, taux de TVA, exercices et périodes, pièces jointes.
     # L'analytique est relevée pour le rapport (aucun contrat Partiduo ne la
@@ -24,7 +24,7 @@ module PartiduoMigrate
       getter warnings = [] of String
 
       def initialize(@url : String)
-        @warnings << PartiduoMigrate.t("noalyss.not_unix_socket", url: safe_url) unless unix_socket?
+        @warnings << PartiduoMigrate.t("legacy.not_unix_socket", url: safe_url) unless unix_socket?
       end
 
       def read(with_attachments : Bool = true) : Source::Dataset
@@ -33,13 +33,13 @@ module PartiduoMigrate
           db.exec("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY")
           version = db.query_one("SELECT max(val) FROM version", as: Int32?)
           unless version == DBVERSION
-            raise Error.new(PartiduoMigrate.t("noalyss.wrong_version", version: version.inspect, expected: DBVERSION))
+            raise Error.new(PartiduoMigrate.t("legacy.wrong_version", version: version.inspect, expected: DBVERSION))
           end
           name = parameter(db, "MY_NAME")
           description = if name
-                          PartiduoMigrate.t("source.noalyss_description_named", database: database_name, name: name)
+                          PartiduoMigrate.t("source.legacy_description_named", database: database_name, name: name)
                         else
-                          PartiduoMigrate.t("source.noalyss_description", database: database_name)
+                          PartiduoMigrate.t("source.legacy_description", database: database_name)
                         end
           dataset = Source::Dataset.new(description)
           dataset.full_chart = true
@@ -56,7 +56,7 @@ module PartiduoMigrate
           dataset
         end
       rescue ex : DB::ConnectionRefused | Socket::Error | PQ::PQError
-        raise Error.new(PartiduoMigrate.t("noalyss.unreadable", url: safe_url, message: ex.message.to_s))
+        raise Error.new(PartiduoMigrate.t("legacy.unreadable", url: safe_url, message: ex.message.to_s))
       end
 
       # SIREN du dossier (paramètre `MY_SIREN`, sinon tiré du numéro de TVA
@@ -67,7 +67,7 @@ module PartiduoMigrate
             parameter(db, "MY_TVA").try { |vat| vat.gsub(/\s/, "").match(/\AFR\w{2}(\d{9})\z/i).try(&.[1]) }
         end
       rescue ex : DB::ConnectionRefused | Socket::Error | PQ::PQError
-        raise Error.new(PartiduoMigrate.t("noalyss.unreadable", url: safe_url, message: ex.message.to_s))
+        raise Error.new(PartiduoMigrate.t("legacy.unreadable", url: safe_url, message: ex.message.to_s))
       end
 
       # URL sans utilisateur ni mot de passe (dans l'autorité ou en
@@ -231,7 +231,7 @@ module PartiduoMigrate
         ORDER BY r.jr_date, r.jr_id, x.j_debit DESC, x.j_id
         SQL
 
-      # Écritures dans l'ordre de l'export FEC de NOALYSS (date, opération,
+      # Écritures dans l'ordre de l'export FEC de l'application d'origine (date, opération,
       # débits d'abord) ; `EcritureNum` numérote les opérations dans cet
       # ordre. Lettrage : un code par `jnt_letter`, daté de la dernière
       # ligne lettrée.

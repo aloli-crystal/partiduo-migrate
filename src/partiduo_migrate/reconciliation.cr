@@ -146,7 +146,7 @@ module PartiduoMigrate
     # du compte auxiliaire et réutilisent les mêmes codes d'un tiers à
     # l'autre : un code porté par plusieurs comptes auxiliaires, dont chacun
     # a des lignes au débit et au crédit, forme un lettrage par tiers
-    # (DECISIONS D-MIG-013). Sinon (NOALYSS, lettrage d'un compte général),
+    # (DECISIONS D-MIG-013). Sinon (base d'origine, lettrage d'un compte général),
     # le code forme un seul lettrage.
     def self.matching_groups(dataset : Source::Dataset, mapping : Mapping) : Array(MatchingGroup)
       groups = Hash({String, String}, Array({Int32, Int32})).new { |hash, key| hash[key] = [] of {Int32, Int32} }

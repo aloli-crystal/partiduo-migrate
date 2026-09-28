@@ -10,11 +10,11 @@ fr:
         Commandes :
           import      reprend un dossier dans l'instance de DATABASE_URL (instance neuve)
           check       contrôle une source et calcule ses chiffres, sans rien écrire
-          export-fec  écrit le FEC d'une base NOALYSS (DBVERSION %{dbversion})
+          export-fec  écrit le FEC d'une base d'origine (DBVERSION %{dbversion})
 
         Sources (import, check) :
           --fec FICHIER          fichier des écritures comptables (tabulation ou barre verticale)
-          --noalyss URL          base NOALYSS, par socket Unix : postgres:///dossier?host=/tmp
+          --legacy-db URL          base d'origine, par socket Unix : postgres:///dossier?host=/tmp
           --encoding NOM         encodage du FEC (utf-8, iso-8859-15, windows-1252) ; défaut : reconnu
 
         Reprise (import) :
@@ -28,7 +28,7 @@ fr:
           --output DOSSIER|FICHIER   défaut : dossier courant, nom réglementaire SIRENFECAAAAMMJJ.txt
           --separator tab|pipe       défaut tab
           --out-encoding NOM         défaut iso-8859-15
-          --siren NUMÉRO             défaut : paramètres du dossier NOALYSS
+          --siren NUMÉRO             défaut : paramètres du dossier d'origine
 
         Toutes les commandes :
           --locale LANGUE        langue des messages et du rapport (%{locales}) ; défaut fr
@@ -39,15 +39,15 @@ fr:
       invalid_option: "option inconnue : %{option}"
       missing_value: "valeur manquante : %{option}"
       unexpected_argument: "argument inattendu : %{argument}"
-      source_expected: "source attendue : --fec FICHIER et/ou --noalyss URL"
+      source_expected: "source attendue : --fec FICHIER et/ou --legacy-db URL"
       date_expected: "date attendue : %{value}"
-      noalyss_expected: "--noalyss URL attendu"
-      no_entries: "aucune écriture dans la base NOALYSS"
+      legacy_expected: "--legacy-db URL attendu"
+      no_entries: "aucune écriture dans la base d'origine"
       detail_fec: "FEC"
       detail_fec_value: "%{file} (%{encoding}, séparateur %{separator})"
       detail_sha256: "Empreinte SHA-256 du FEC"
-      detail_noalyss: "Base NOALYSS"
-      detail_noalyss_value: "%{description}, DBVERSION %{dbversion}"
+      detail_legacy: "Base d'origine"
+      detail_legacy_value: "%{description}, DBVERSION %{dbversion}"
       detail_warning: "Avertissement de lecture"
       more_problems: "… %{total} autre(s)"
       fec_rejected: "FEC non conforme : %{total} défaut(s), rien n'est importé"
@@ -83,15 +83,15 @@ fr:
       invalid_utf8: "le fichier n'est pas en UTF-8 valide"
       unreadable_encoding: "lecture en %{name} impossible : %{message}"
       c1_characters: "caractères de contrôle C1 dans le fichier lu en %{encoding} : vérifiez l'encodage (--encoding)"
-    noalyss:
-      wrong_version: "base NOALYSS en DBVERSION %{version}, %{expected} attendue : mettez-la d'abord à jour avec NOALYSS"
-      unreadable: "base NOALYSS illisible (%{url}) : %{message}"
-      not_unix_socket: "la base NOALYSS n'est pas jointe par un socket Unix (%{url}) : préférez postgres:///base?host=/tmp"
+    legacy:
+      wrong_version: "base d'origine en DBVERSION %{version}, %{expected} attendue : mettez-la d'abord à jour avec l'application d'origine"
+      unreadable: "base d'origine illisible (%{url}) : %{message}"
+      not_unix_socket: "la base d'origine n'est pas jointe par un socket Unix (%{url}) : préférez postgres:///base?host=/tmp"
     source:
       fec_description: "FEC %{name}"
-      noalyss_description: "Base NOALYSS %{database}"
-      noalyss_description_named: "Base NOALYSS %{database} (%{name})"
-      completed_description: "%{fec}, complété par la %{noalyss}"
+      legacy_description: "Base d'origine %{database}"
+      legacy_description_named: "Base d'origine %{database} (%{name})"
+      completed_description: "%{fec}, complété par la %{legacy}"
       entry_reference: "%{journal} n° %{number}"
       currency_detail: "%{amount} %{code} : écriture passée en devise de tenue, montant en devise non repris"
       extra_attachment_detail: "%{file} (%{type}) : une écriture Partiduo ne porte qu'une pièce jointe"
@@ -214,7 +214,7 @@ fr:
       differences_warning: "%{total} ligne(s) en écart : la reprise est un échec. Détail dans `ecarts.csv`."
       reading_title: "Contrôle de lecture de la source"
       reading_intro_fec: "Le FEC est totalisé pendant sa lecture, sur les montants bruts de chaque ligne (avant le solde d'une ligne qui porte débit et crédit) ; ces totaux sont comparés à ceux du modèle que la reprise écrit. Débit et crédit d'une ligne pouvant être soldés, la comparaison porte sur le nombre de lignes et le solde. Détail dans `lecture-source.csv`."
-      reading_intro_noalyss: "La base NOALYSS est relue par des requêtes d'agrégat directement sur les lignes d'écritures (`jrnx`, comme la balance de NOALYSS), indépendamment de la requête qui lit les écritures ; ces totaux sont comparés à ceux du modèle que la reprise écrit. Détail dans `lecture-source.csv`."
+      reading_intro_legacy: "La base d'origine est relue par des requêtes d'agrégat directement sur les lignes d'écritures (`jrnx`, comme la balance de l'application d'origine), indépendamment de la requête qui lit les écritures ; ces totaux sont comparés à ceux du modèle que la reprise écrit. Détail dans `lecture-source.csv`."
       reading_ok: "Aucun écart : %{accounts} compte(s), %{journals} journal(aux) et %{periods} mois identiques."
       reading_failures: "%{total} ligne(s) en écart entre la source relue et son modèle : erreur de lecture, la reprise est un échec."
       totals_title: "Totaux"

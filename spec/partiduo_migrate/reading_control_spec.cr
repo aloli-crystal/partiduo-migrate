@@ -17,22 +17,22 @@ private def reading_failures(dataset : PartiduoMigrate::Source::Dataset) : Array
   end
 end
 
-# Copie de travail de la base NOALYSS de démonstration, propre à ce
+# Copie de travail de la base d'origine de démonstration, propre à ce
 # processus, que la spec peut altérer.
-private def with_noalyss_copy(&)
-  name = "partiduo_test_m_noalyss_#{Process.pid}"
-  status = Process.run(File.join(PartiduoMigrate::SpecSupport::ROOT, "scripts", "noalyss-demo"), [name],
+private def with_legacy_copy(&)
+  name = "partiduo_test_m_legacy_#{Process.pid}"
+  status = Process.run(File.join(PartiduoMigrate::SpecSupport::ROOT, "scripts", "legacy-demo"), [name],
     output: Process::Redirect::Close, error: Process::Redirect::Inherit)
-  raise "scripts/noalyss-demo #{name} en échec" unless status.success?
+  raise "scripts/legacy-demo #{name} en échec" unless status.success?
   yield PartiduoMigrate::SpecSupport.database_url(name)
 ensure
   name.try { |base| Process.run("dropdb", ["--if-exists", base]) }
 end
 
 describe "Contrôle de lecture de la source" do
-  it "concorde pour le FEC et la base NOALYSS de démonstration" do
+  it "concorde pour le FEC et la base d'origine de démonstration" do
     reading_failures(demo_dataset).should be_empty
-    dataset = PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read(with_attachments: false)
+    dataset = PartiduoMigrate::Legacy::Database.new(PartiduoMigrate::SpecSupport.legacy_url).read(with_attachments: false)
     sections = PartiduoMigrate::Reconciliation.reading(dataset)
     sections.map(&.key).should eq(%w[reading_accounts reading_journals reading_periods])
     sections.first.columns.should eq(%w[lines debit credit balance])
@@ -60,8 +60,8 @@ describe "Contrôle de lecture de la source" do
                                          {"reading_periods", "2024-01"}])
   end
 
-  it "fait échouer la reprise d'une base NOALYSS mal lue (ligne sans opération, ligne dédoublée)" do
-    with_noalyss_copy do |url|
+  it "fait échouer la reprise d'une base d'origine mal lue (ligne sans opération, ligne dédoublée)" do
+    with_legacy_copy do |url|
       DB.open(url) do |db|
         # Deux lignes `operation_currency` pour une même ligne : le LEFT JOIN
         # de la lecture des écritures la dédouble.
@@ -70,7 +70,7 @@ describe "Contrôle de lecture de la source" do
         db.exec("INSERT INTO jrnx (j_date, j_montant, j_poste, j_grpt, j_jrn_def, j_debit, j_tech_user, j_tech_per) " \
                 "SELECT j_date, 5, j_poste, 999999, j_jrn_def, true, j_tech_user, j_tech_per FROM jrnx WHERE j_id = 2")
       end
-      dataset = PartiduoMigrate::Noalyss::Database.new(url).read(with_attachments: false)
+      dataset = PartiduoMigrate::Legacy::Database.new(url).read(with_attachments: false)
       failures = reading_failures(dataset)
       failures.should contain({"reading_accounts", "510001"})
       failures.should contain({"reading_accounts", "4100003"})
@@ -153,15 +153,15 @@ describe "Rapport : cellules CSV et URL de la source" do
     dir.try { |path| FileUtils.rm_rf(path) }
   end
 
-  it "masque utilisateur et mot de passe de l'URL NOALYSS dans les messages" do
-    database = PartiduoMigrate::Noalyss::Database.new("postgres://compta:secret@127.0.0.1:1/dossier")
+  it "masque utilisateur et mot de passe de l'URL de la base d'origine dans les messages" do
+    database = PartiduoMigrate::Legacy::Database.new("postgres://compta:secret@127.0.0.1:1/dossier")
     database.safe_url.should_not contain("secret")
     database.safe_url.should_not contain("compta")
     database.warnings.first.should contain("socket Unix")
-    error = expect_raises(PartiduoMigrate::Noalyss::Error) { database.read }
+    error = expect_raises(PartiduoMigrate::Legacy::Error) { database.read }
     error.message.to_s.should_not contain("secret")
 
-    socket = PartiduoMigrate::Noalyss::Database.new("postgres:///dossier?host=/tmp&password=secret")
+    socket = PartiduoMigrate::Legacy::Database.new("postgres:///dossier?host=/tmp&password=secret")
     socket.warnings.should be_empty
     socket.safe_url.should eq("postgres:///dossier?host=%2Ftmp")
   end

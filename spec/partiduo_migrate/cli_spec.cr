@@ -52,10 +52,10 @@ describe PartiduoMigrate::CLI do
     stdout.should contain("Total débit 246290,77, crédit 246290,77 : équilibré.")
   end
 
-  it "exporte le FEC d'une base NOALYSS" do
+  it "exporte le FEC d'une base d'origine" do
     dir = PartiduoMigrate::SpecSupport.report_dir
     Dir.mkdir_p(dir)
-    status, stdout, _ = cli("export-fec", "--noalyss", PartiduoMigrate::SpecSupport.noalyss_url, "--output", dir)
+    status, stdout, _ = cli("export-fec", "--legacy-db", PartiduoMigrate::SpecSupport.legacy_url, "--output", dir)
     status.should eq(0)
     stdout.should contain("732829320FEC20241231.txt")
     File.read(File.join(dir, "732829320FEC20241231.txt")).should eq(File.read(PartiduoMigrate::SpecSupport::DEMO_FEC))

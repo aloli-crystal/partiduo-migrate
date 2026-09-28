@@ -4,7 +4,7 @@ require "big"
 
 module PartiduoMigrate
   # Modèle en mémoire d'un dossier à reprendre, commun aux deux sources
-  # (FEC et base NOALYSS) : c'est lui que l'importateur écrit par le contrat
+  # (FEC et base d'origine) : c'est lui que l'importateur écrit par le contrat
   # `Partiduo::Api` et dont la réconciliation calcule les chiffres « avant ».
   module Source
     ZERO = BigDecimal.new(0)
@@ -35,11 +35,11 @@ module PartiduoMigrate
       end
     end
 
-    # Pièce jointe d'une écriture (base NOALYSS : `jrn.jr_pj`).
+    # Pièce jointe d'une écriture (base d'origine : `jrn.jr_pj`).
     record Attachment, filename : String, content_type : String, content : Bytes
 
     # Écriture : lignes d'un même `EcritureNum` dans un même journal.
-    # `origin` : identifiant dans la source (`jrn.jr_id` de NOALYSS).
+    # `origin` : identifiant dans la source (`jrn.jr_id` de l'application d'origine).
     class Entry
       getter journal_code : String
       getter number : String
@@ -79,16 +79,16 @@ module PartiduoMigrate
     end
 
     # Journal : code et libellé ; `kind` (`purchase`, `sale`, `financial`,
-    # `misc`) et fiche Banque quand la source les connaît (NOALYSS).
+    # `misc`) et fiche Banque quand la source les connaît (base d'origine).
     record Journal, code : String, label : String, kind : String? = nil, bank_card : String? = nil,
       receipt_prefix : String = ""
 
     # Compte du plan comptable : `kind` (`asset`, `liability`…) et
-    # `direct_use` connus de la source NOALYSS seulement.
+    # `direct_use` connus de la base d'origine seulement.
     record Account, number : String, label : String, parent : String? = nil, kind : String? = nil,
       direct_use : Bool = true
 
-    # Fiche complète (base NOALYSS). `category` : identifiant de la catégorie
+    # Fiche complète (base d'origine). `category` : identifiant de la catégorie
     # source (`fiche_def.fd_id`) ; `attributes` : valeurs par attribut
     # (`attr_def.ad_id`).
     record Card,
@@ -99,10 +99,10 @@ module PartiduoMigrate
       enabled : Bool,
       attributes : Hash(Int64, String)
 
-    # Catégorie de fiches (base NOALYSS : `fiche_def`, modèle `frd_id`).
+    # Catégorie de fiches (base d'origine : `fiche_def`, modèle `frd_id`).
     record CardCategory, id : Int64, label : String, model : Int64, description : String
 
-    # Taux de TVA (base NOALYSS : `tva_rate`) ; `rate` en pourcentage.
+    # Taux de TVA (base d'origine : `tva_rate`) ; `rate` en pourcentage.
     record VatRate,
       code : String,
       label : String,
@@ -115,7 +115,7 @@ module PartiduoMigrate
       collected_account : String?,
       id : Int64 = 0_i64
 
-    # Période d'un exercice de la source (base NOALYSS : `parm_periode`).
+    # Période d'un exercice de la source (base d'origine : `parm_periode`).
     record Period, starts_on : Time, ends_on : Time, closed : Bool = false do
       def single_day? : Bool
         starts_on == ends_on
@@ -134,7 +134,7 @@ module PartiduoMigrate
       end
 
       # Période d'ouverture ou de clôture d'un jour (option « 13 périodes »
-      # de NOALYSS) : reprise telle quelle par l'instance.
+      # de l'application d'origine) : reprise telle quelle par l'instance.
       def opening_period? : Bool
         periods.size > 1 && periods.first.single_day?
       end
@@ -169,9 +169,9 @@ module PartiduoMigrate
     # Chiffres de la source relevés *indépendamment* du modèle, pour le
     # contrôle de lecture (ADR-001 D5) : FEC totalisé pendant la lecture sur
     # les montants bruts de chaque ligne, avant le calcul de son solde ; base
-    # NOALYSS relue par des requêtes d'agrégat sur `jrnx` (modèle de
+    # d'origine relue par des requêtes d'agrégat sur `jrnx` (modèle de
     # `acc_balance.class.php`). `sides` : débit et crédit comparables un à
-    # un (base NOALYSS) ; sinon (FEC, dont une ligne peut porter débit et
+    # un (base d'origine) ; sinon (FEC, dont une ligne peut porter débit et
     # crédit) seuls le nombre de lignes et le solde le sont.
     class Control
       getter accounts = Hash(String, Tally).new(Tally.new)
@@ -225,7 +225,7 @@ module PartiduoMigrate
       getter unported = [] of Unported
       # Nom du fichier FEC (date de clôture `…FECAAAAMMJJ`).
       property file_name : String? = nil
-      # Toute la base NOALYSS (plan complet) plutôt que le seul FEC.
+      # Toute la base d'origine (plan complet) plutôt que le seul FEC.
       property? full_chart = false
       # Zéros ignorés (lignes FEC à débit et crédit nuls).
       property zero_lines = 0

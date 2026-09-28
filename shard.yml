@@ -4,7 +4,7 @@ version: 0.1.0
 description: |
   Reprise d'un dossier comptable dans une instance Partiduo neuve
   (ADR-001 D5) : fichier des écritures comptables (FEC, article A47 A-1
-  du LPF) et base NOALYSS en DBVERSION 208. Écrit exclusivement par le
+  du LPF) et base d'origine en DBVERSION 208. Écrit exclusivement par le
   contrat Partiduo::Api et produit un rapport de réconciliation au centime.
 
 authors:

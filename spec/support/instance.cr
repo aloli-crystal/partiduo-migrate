@@ -17,30 +17,30 @@ module PartiduoMigrate
       Partiduo::Api::Core.provision(Partiduo::Api::Actor.system, input).value!
     end
 
-    # Base NOALYSS de démonstration (DBVERSION 208), créée par
-    # `scripts/noalyss-demo` si elle n'existe pas. `NOALYSS_DEMO_URL` : URL
+    # Base d'origine de démonstration (DBVERSION 208), créée par
+    # `scripts/legacy-demo` si elle n'existe pas. `LEGACY_DEMO_URL` : URL
     # complète (CI, PostgreSQL en TCP) ; sinon socket Unix `/tmp`.
-    def self.noalyss_url : String
-      name = ENV["NOALYSS_DEMO_DB"]? || "partiduo_noalyss_demo"
-      url = ENV["NOALYSS_DEMO_URL"]?.presence || "postgres:///#{name}?host=/tmp"
+    def self.legacy_url : String
+      name = ENV["LEGACY_DEMO_DB"]? || "partiduo_legacy_demo"
+      url = ENV["LEGACY_DEMO_URL"]?.presence || "postgres:///#{name}?host=/tmp"
       exists = begin
-        DB.open(url) { |db| db.query_one("SELECT max(val) FROM version", as: Int32?) == Noalyss::DBVERSION }
+        DB.open(url) { |db| db.query_one("SELECT max(val) FROM version", as: Int32?) == Legacy::DBVERSION }
       rescue
         false
       end
       unless exists
-        status = Process.run(File.join(ROOT, "scripts", "noalyss-demo"), [name], output: Process::Redirect::Close,
+        status = Process.run(File.join(ROOT, "scripts", "legacy-demo"), [name], output: Process::Redirect::Close,
           error: Process::Redirect::Inherit)
-        raise "scripts/noalyss-demo #{name} en échec" unless status.success?
+        raise "scripts/legacy-demo #{name} en échec" unless status.success?
       end
       url
     end
 
     # URL d'une base de travail `name` sur le même serveur que la base de
-    # démonstration : celui de `NOALYSS_DEMO_URL` (CI, en TCP), sinon la
+    # démonstration : celui de `LEGACY_DEMO_URL` (CI, en TCP), sinon la
     # socket Unix `/tmp`.
     def self.database_url(name : String) : String
-      if base = ENV["NOALYSS_DEMO_URL"]?.presence
+      if base = ENV["LEGACY_DEMO_URL"]?.presence
         uri = URI.parse(base)
         uri.path = "/#{name}"
         uri.to_s

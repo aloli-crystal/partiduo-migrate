@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Crée une base d'origine de démonstration en DBVERSION 208 : scripts SQL du
+# modèle français (include/sql/mod2 des sources d'origine), correctifs 202 à 207, puis
+# un exercice 2024 d'écritures (scripts/legacy_demo_data.sql).
+#
+#   scripts/legacy-demo [base]          # défaut : partiduo_legacy_demo
+#
+# Variables : LEGACY_APP (sources de l'application d'origine, qui portent
+# include/sql ; défaut ../legacy-app à côté de ce dépôt, voir README.adoc),
+# PGHOST (socket Unix, défaut /tmp).
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+database="${1:-partiduo_legacy_demo}"
+legacy_app="${LEGACY_APP:-$here/../../legacy-app}"
+sql="$legacy_app/include/sql"
+export PGHOST="${PGHOST:-/tmp}"
+
+case "$database" in
+  partiduo_*) ;;
+  *) echo "legacy-demo : le nom de la base doit commencer par partiduo_ ($database)" >&2; exit 2 ;;
+esac
+[ -f "$sql/mod2/schema.sql" ] || { echo "legacy-demo : $sql/mod2/schema.sql introuvable (LEGACY_APP)" >&2; exit 2; }
+
+export PGOPTIONS='-c client_min_messages=warning'
+run() { psql -X -q -v ON_ERROR_STOP=1 -d "$database" "$@" >/dev/null; }
+
+dropdb --if-exists "$database"
+createdb --encoding=UTF8 "$database"
+run -f "$sql/mod2/schema.sql"
+run -f "$sql/mod2/data.sql"
+run -f "$sql/mod2/constraint.sql"
+for version in 202 203 204 205 206 207; do
+  run -f "$sql/patch/upgrade$version.sql" 2>/dev/null
+done
+run -f "$here/legacy_demo_data.sql"
+
+version="$(psql -X -At -d "$database" -c 'select max(val) from version')"
+count="$(psql -X -At -d "$database" -c 'select count(*) from jrn')"
+echo "Base d'origine $database : DBVERSION $version, $count opérations."

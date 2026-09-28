@@ -10,11 +10,11 @@ en:
         Commands:
           import      migrates a set of books into the DATABASE_URL instance (new instance)
           check       checks a source and computes its figures, without writing anything
-          export-fec  writes the FEC of a NOALYSS database (DBVERSION %{dbversion})
+          export-fec  writes the FEC of a legacy database (DBVERSION %{dbversion})
 
         Sources (import, check):
           --fec FILE             French accounting entries file (tab or vertical bar separated)
-          --noalyss URL          NOALYSS database, through a Unix socket: postgres:///books?host=/tmp
+          --legacy-db URL          Legacy database, through a Unix socket: postgres:///books?host=/tmp
           --encoding NAME        FEC encoding (utf-8, iso-8859-15, windows-1252); default: detected
 
         Migration (import):
@@ -28,7 +28,7 @@ en:
           --output DIR|FILE          default: current directory, statutory name SIRENFECYYYYMMDD.txt
           --separator tab|pipe       default tab
           --out-encoding NAME        default iso-8859-15
-          --siren NUMBER             default: NOALYSS company settings
+          --siren NUMBER             default: settings of the legacy books
 
         All commands:
           --locale LANGUAGE      language of messages and report (%{locales}); default fr
@@ -39,15 +39,15 @@ en:
       invalid_option: "unknown option: %{option}"
       missing_value: "missing value: %{option}"
       unexpected_argument: "unexpected argument: %{argument}"
-      source_expected: "source expected: --fec FILE and/or --noalyss URL"
+      source_expected: "source expected: --fec FILE and/or --legacy-db URL"
       date_expected: "date expected: %{value}"
-      noalyss_expected: "--noalyss URL expected"
-      no_entries: "no entry in the NOALYSS database"
+      legacy_expected: "--legacy-db URL expected"
+      no_entries: "no entry in the legacy database"
       detail_fec: "FEC"
       detail_fec_value: "%{file} (%{encoding}, %{separator} separator)"
       detail_sha256: "SHA-256 digest of the FEC"
-      detail_noalyss: "NOALYSS database"
-      detail_noalyss_value: "%{description}, DBVERSION %{dbversion}"
+      detail_legacy: "Legacy database"
+      detail_legacy_value: "%{description}, DBVERSION %{dbversion}"
       detail_warning: "Reading warning"
       more_problems: "… %{total} more"
       fec_rejected: "non-compliant FEC: %{total} defect(s), nothing is imported"
@@ -83,15 +83,15 @@ en:
       invalid_utf8: "the file is not valid UTF-8"
       unreadable_encoding: "cannot read as %{name}: %{message}"
       c1_characters: "C1 control characters in the file read as %{encoding}: check the encoding (--encoding)"
-    noalyss:
-      wrong_version: "NOALYSS database at DBVERSION %{version}, %{expected} expected: upgrade it with NOALYSS first"
-      unreadable: "unreadable NOALYSS database (%{url}): %{message}"
-      not_unix_socket: "the NOALYSS database is not reached through a Unix socket (%{url}): prefer postgres:///database?host=/tmp"
+    legacy:
+      wrong_version: "Legacy database at DBVERSION %{version}, %{expected} expected: upgrade it with the original application first"
+      unreadable: "unreadable legacy database (%{url}): %{message}"
+      not_unix_socket: "the legacy database is not reached through a Unix socket (%{url}): prefer postgres:///database?host=/tmp"
     source:
       fec_description: "FEC %{name}"
-      noalyss_description: "NOALYSS database %{database}"
-      noalyss_description_named: "NOALYSS database %{database} (%{name})"
-      completed_description: "%{fec}, completed by the %{noalyss}"
+      legacy_description: "Legacy database %{database}"
+      legacy_description_named: "Legacy database %{database} (%{name})"
+      completed_description: "%{fec}, completed by the %{legacy}"
       entry_reference: "%{journal} no. %{number}"
       currency_detail: "%{amount} %{code}: entry posted in the accounting currency, foreign currency amount not migrated"
       extra_attachment_detail: "%{file} (%{type}): a Partiduo entry carries a single attachment"
@@ -214,7 +214,7 @@ en:
       differences_warning: "%{total} line(s) with a difference: the migration failed. Details in `ecarts.csv`."
       reading_title: "Source reading check"
       reading_intro_fec: "The FEC is totalled while it is read, on the raw amounts of each line (before netting a line that carries both debit and credit); these totals are compared with those of the model the migration writes. As debit and credit of a line may be netted, the comparison covers the number of lines and the balance. Details in `lecture-source.csv`."
-      reading_intro_noalyss: "The NOALYSS database is re-read with aggregate queries directly on the entry lines (`jrnx`, like the NOALYSS trial balance), independently of the query that reads the entries; these totals are compared with those of the model the migration writes. Details in `lecture-source.csv`."
+      reading_intro_legacy: "The Legacy database is re-read with aggregate queries directly on the entry lines (`jrnx`, like the trial balance of the original application), independently of the query that reads the entries; these totals are compared with those of the model the migration writes. Details in `lecture-source.csv`."
       reading_ok: "No difference: %{accounts} account(s), %{journals} journal(s) and %{periods} month(s) identical."
       reading_failures: "%{total} line(s) differ between the re-read source and its model: reading error, the migration failed."
       totals_title: "Totals"

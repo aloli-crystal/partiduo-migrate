@@ -2,14 +2,14 @@
 
 require "../spec_helper"
 
-private def noalyss_dataset : PartiduoMigrate::Source::Dataset
-  PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read(with_attachments: false)
+private def legacy_dataset : PartiduoMigrate::Source::Dataset
+  PartiduoMigrate::Legacy::Database.new(PartiduoMigrate::SpecSupport.legacy_url).read(with_attachments: false)
 end
 
-describe "Règles de reprise d'une base NOALYSS" do
+describe "Règles de reprise d'une base d'origine" do
   it "reprend la nature des journaux (jrn_def_type) et la fiche Banque du journal financier" do
     PartiduoMigrate::SpecSupport.provision!
-    PartiduoMigrate::Migration.new(noalyss_dataset).run.should be_true
+    PartiduoMigrate::Migration.new(legacy_dataset).run.should be_true
     ledger = ->(code : String) { Partiduo::Api::Accounting.ledger_by_code(actor, code) }
     ledger.call("F01").kind.code.should eq("financial")
     ledger.call("V01").kind.code.should eq("sale")
@@ -20,7 +20,7 @@ describe "Règles de reprise d'une base NOALYSS" do
 
   it "reprend le type des comptes et leur usage direct (pcm_type, pcm_direct_use)" do
     PartiduoMigrate::SpecSupport.provision!
-    dataset = noalyss_dataset
+    dataset = legacy_dataset
     dataset.accounts["53"].direct_use.should be_false
     PartiduoMigrate::Migration.new(dataset).run.should be_true
     # Tout compte mouvementé dans la source est utilisable en saisie.
@@ -28,9 +28,9 @@ describe "Règles de reprise d'une base NOALYSS" do
     used.each { |number| Partiduo::Api::Accounting.account(actor, number).direct_use.should be_true }
   end
 
-  it "ferme après les écritures les périodes closes dans NOALYSS (p_closed)" do
+  it "ferme après les écritures les périodes closes dans la base d'origine (p_closed)" do
     PartiduoMigrate::SpecSupport.provision!
-    dataset = noalyss_dataset
+    dataset = legacy_dataset
     year = dataset.fiscal_years.first
     year.months.should eq(12)
     periods = year.periods.map { |period| period.starts_on.month <= 2 ? period.copy_with(closed: true) : period }
@@ -45,9 +45,9 @@ describe "Règles de reprise d'une base NOALYSS" do
     Partiduo::Api::Accounting.count_entries(actor).should eq(133)
   end
 
-  it "désactive après les écritures les fiches désactivées dans NOALYSS (f_enable)" do
+  it "désactive après les écritures les fiches désactivées dans la base d'origine (f_enable)" do
     PartiduoMigrate::SpecSupport.provision!
-    dataset = noalyss_dataset
+    dataset = legacy_dataset
     index = dataset.cards.index!(&.code.==("DUNE"))
     dataset.cards[index] = dataset.cards[index].copy_with(enabled: false)
     PartiduoMigrate::Migration.new(dataset).run.should be_true
@@ -67,7 +67,7 @@ describe "Règles de reprise d'une base NOALYSS" do
       db.exec("CREATE TABLE version (val integer)")
       db.exec("INSERT INTO version VALUES (206), (207)")
     end
-    error = expect_raises(PartiduoMigrate::Noalyss::Error) { PartiduoMigrate::Noalyss::Database.new(url).read }
+    error = expect_raises(PartiduoMigrate::Legacy::Error) { PartiduoMigrate::Legacy::Database.new(url).read }
     error.message.to_s.should contain("DBVERSION 207, 208 attendue")
   ensure
     name.try { |base| Process.run("dropdb", ["--if-exists", base]) }
@@ -75,11 +75,11 @@ describe "Règles de reprise d'une base NOALYSS" do
 
   it "rapproche les pièces jointes d'un FEC complété par journal, date, pièce et montant" do
     fec = demo_dataset
-    noalyss = PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read
+    legacy = PartiduoMigrate::Legacy::Database.new(PartiduoMigrate::SpecSupport.legacy_url).read
     # Écriture retirée du FEC : sa pièce jointe est relevée en annexe.
     target = fec.entries.find! { |entry| entry.receipt == "A-0001" }
     fec.entries.delete(target)
-    merged = PartiduoMigrate::Complement.merge(fec, noalyss)
+    merged = PartiduoMigrate::Complement.merge(fec, legacy)
     merged.entries.count(&.attachment).should eq(13)
     orphan = merged.unported.find! { |item| item.kind == "orphan_attachment" }
     orphan.detail.should contain("écriture absente du FEC")

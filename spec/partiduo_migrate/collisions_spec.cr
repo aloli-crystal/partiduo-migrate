@@ -4,8 +4,8 @@ require "../spec_helper"
 
 private alias B = PartiduoMigrate::SpecSupport::FecBuilder
 
-private def noalyss_dataset : PartiduoMigrate::Source::Dataset
-  PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read(with_attachments: false)
+private def legacy_dataset : PartiduoMigrate::Source::Dataset
+  PartiduoMigrate::Legacy::Database.new(PartiduoMigrate::SpecSupport.legacy_url).read(with_attachments: false)
 end
 
 private def vat_rate(code : String, rate : String, id : Int64) : PartiduoMigrate::Source::VatRate
@@ -15,9 +15,9 @@ private def vat_rate(code : String, rate : String, id : Int64) : PartiduoMigrate
 end
 
 describe "Codes en collision pendant la reprise" do
-  it "crée deux taux distincts pour deux codes NOALYSS qui donnent le même code" do
+  it "crée deux taux distincts pour deux codes de la base d'origine qui donnent le même code" do
     PartiduoMigrate::SpecSupport.provision!
-    dataset = noalyss_dataset
+    dataset = legacy_dataset
     dataset.vat_rates << vat_rate("FRINTRA_ACH", "20", 901_i64)
     dataset.vat_rates << vat_rate("FRINTRA_VEN", "5.5", 902_i64)
     migration = PartiduoMigrate::Migration.new(dataset)
@@ -33,7 +33,7 @@ describe "Codes en collision pendant la reprise" do
 
   it "ne modifie un taux du jeu initial que si son taux est identique" do
     PartiduoMigrate::SpecSupport.provision!
-    dataset = noalyss_dataset
+    dataset = legacy_dataset
     # INT (10 %) existe dans le jeu initial français.
     dataset.vat_rates << vat_rate("INT", "13", 903_i64)
     migration = PartiduoMigrate::Migration.new(dataset)

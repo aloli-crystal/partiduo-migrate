@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # CI de partiduo-migrate (ADR-001 D5) : format, Ameba, specs sur PostgreSQL
-# (instance de test et base NOALYSS de démonstration créée par
-# scripts/noalyss-demo depuis les sources SQL de NOALYSS). Non exécutée tant
+# (instance de test et base d'origine de démonstration créée par
+# scripts/legacy-demo depuis les sources SQL d'origine). Non exécutée tant
 # que les dépôts ne sont pas publiés (BLOCAGES B-002).
 name: CI
 
@@ -26,6 +26,13 @@ jobs:
         run: scripts/ci-checkout-deps.sh
       - name: Format
         run: crystal tool format --check src spec config
+      - name: Aucune mention du logiciel d'origine hors *.adoc et *.md
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if git grep -il "no""alyss" -- . ':!*.adoc' ':!*.md'; then
+            echo "Mention interdite trouvée dans les fichiers ci-dessus." >&2
+            exit 1
+          fi
       - name: Shards
         run: shards install
       - name: Ameba
@@ -51,11 +58,11 @@ jobs:
     env:
       # En CI seulement, PostgreSQL est un service joignable en TCP.
       DATABASE_URL: postgres://partiduo:partiduo@localhost:5432/partiduo_test
-      NOALYSS_DEMO_URL: postgres://partiduo:partiduo@localhost:5432/partiduo_noalyss_demo
+      LEGACY_DEMO_URL: postgres://partiduo:partiduo@localhost:5432/partiduo_legacy_demo
       PGHOST: localhost
       PGUSER: partiduo
       PGPASSWORD: partiduo
-      NOALYSS_APP: ${{ github.workspace }}/../noalyss/noalyss-app
+      LEGACY_APP: ${{ github.workspace }}/../legacy-app
     steps:
       - uses: actions/checkout@v4
       - name: Mémoire d'échange (la compilation des specs dépasse 6 Go)
@@ -67,15 +74,22 @@ jobs:
           crystal: 1.19.1
       - name: Bibliothèques de compilation
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libyaml-dev libssl-dev libgmp-dev libxml2-dev libpcre2-dev lld
-      - name: Client PostgreSQL (scripts/noalyss-demo)
+      - name: Client PostgreSQL (scripts/legacy-demo)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
-      - name: Sources SQL de NOALYSS (lecture seule)
-        run: git clone --depth 1 "${NOALYSS_REPO:-https://gitlab.com/noalyss/noalyss.git}" ../noalyss/noalyss-app
+      - name: Sources SQL d'origine (lecture seule)
+        # Dépôt : variable LEGACY_REPO du dépôt GitHub, sinon l'attribut
+        # :legacy-repo: de README.adoc (seule la documentation cite le nom).
+        env:
+          LEGACY_REPO: ${{ vars.LEGACY_REPO }}
+        run: |
+          repo="${LEGACY_REPO:-$(sed -n 's/^:legacy-repo: *//p' README.adoc)}"
+          test -n "$repo"
+          git clone --depth 1 "$repo" "$LEGACY_APP"
       - name: Dépendances path (cœur, shards maison)
         run: scripts/ci-checkout-deps.sh
       - name: Shards
         run: shards install
-      - name: Base NOALYSS de démonstration
-        run: scripts/noalyss-demo partiduo_noalyss_demo
+      - name: Base d'origine de démonstration
+        run: scripts/legacy-demo partiduo_legacy_demo
       - name: Specs
         run: crystal spec --order random --no-debug --threads 1 --link-flags=-fuse-ld=lld

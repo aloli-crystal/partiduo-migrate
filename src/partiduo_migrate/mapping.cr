@@ -10,7 +10,7 @@ module PartiduoMigrate
     getter journals = {} of String => String
     getter ledger_ids = {} of String => Int64
     getter cards = {} of String => String
-    # Code NOALYSS du taux (`tva_rate.tva_code`) → code du taux de l'instance.
+    # Code l'application d'origine du taux (`tva_rate.tva_code`) → code du taux de l'instance.
     getter vat_rates = {} of String => String
     # Ligne source (`{écriture, rang}`) → identifiant de la ligne créée.
     getter lines = {} of {Int32, Int32} => Int64

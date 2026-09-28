@@ -2,19 +2,19 @@
 
 require "../spec_helper"
 
-describe "Reprise d'une base NOALYSS" do
+describe "Reprise d'une base d'origine" do
   it "exporte de la base de démonstration exactement le FEC livré" do
-    url = PartiduoMigrate::SpecSupport.noalyss_url
-    dataset = PartiduoMigrate::Noalyss::Database.new(url).read(with_attachments: false)
+    url = PartiduoMigrate::SpecSupport.legacy_url
+    dataset = PartiduoMigrate::Legacy::Database.new(url).read(with_attachments: false)
     io = IO::Memory.new
     PartiduoMigrate::Fec::Writer.new.write(dataset, io)
     io.to_slice.should eq(File.read(PartiduoMigrate::SpecSupport::DEMO_FEC).to_slice)
-    PartiduoMigrate::Noalyss::Database.new(url).siren.should eq("732829320")
+    PartiduoMigrate::Legacy::Database.new(url).siren.should eq("732829320")
   end
 
   it "reprend la base : fiches complètes, TVA, exercice, pièces jointes, réconciliation au centime" do
     PartiduoMigrate::SpecSupport.provision!
-    dataset = PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read
+    dataset = PartiduoMigrate::Legacy::Database.new(PartiduoMigrate::SpecSupport.legacy_url).read
     migration = PartiduoMigrate::Migration.new(dataset)
     ok = migration.run
     ok.should be_true
@@ -52,7 +52,7 @@ describe "Reprise d'une base NOALYSS" do
     attachment.filename.should eq("loyer-2024-01.pdf")
     attachment.content_type.should eq("application/pdf")
     entry.due_date.should eq(Time.utc(2024, 1, 10))
-    entry.source.should start_with("noalyss:")
+    entry.source.should start_with("legacy:")
 
     # Échéances reprises : la balance âgée en tient compte.
     ageing = migration.comparison.present!.after.ageing["DUNE"]
@@ -62,14 +62,14 @@ describe "Reprise d'une base NOALYSS" do
     dataset.unported.count(&.kind.==("analytic")).should eq(18)
     dataset.unported.count(&.kind.==("analytic_post")).should eq(3)
 
-    # Les utilisateurs de NOALYSS ne sont jamais repris.
+    # Les utilisateurs de l'application d'origine ne sont jamais repris.
     Partiduo::Api::Auth.users(actor).should be_empty
   end
 
-  it "complète un FEC par la base NOALYSS dont il est issu" do
+  it "complète un FEC par la base d'origine dont il est issu" do
     PartiduoMigrate::SpecSupport.provision!
-    noalyss = PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read
-    dataset = PartiduoMigrate::Complement.merge(demo_dataset, noalyss)
+    legacy = PartiduoMigrate::Legacy::Database.new(PartiduoMigrate::SpecSupport.legacy_url).read
+    dataset = PartiduoMigrate::Complement.merge(demo_dataset, legacy)
     migration = PartiduoMigrate::Migration.new(dataset)
     migration.run.should be_true
     migration.counts["attachments"].should eq(14)
@@ -80,10 +80,10 @@ describe "Reprise d'une base NOALYSS" do
   end
 end
 
-describe "Reprise d'une fiche NOALYSS aux valeurs refusées" do
+describe "Reprise d'une fiche de la base d'origine aux valeurs refusées" do
   it "conserve en attribut propre un numéro de TVA que le socle refuse" do
     PartiduoMigrate::SpecSupport.provision!
-    dataset = PartiduoMigrate::Noalyss::Database.new(PartiduoMigrate::SpecSupport.noalyss_url).read
+    dataset = PartiduoMigrate::Legacy::Database.new(PartiduoMigrate::SpecSupport.legacy_url).read
     index = dataset.cards.index!(&.code.==("CEDRE"))
     card = dataset.cards[index]
     attributes = card.attributes.dup
@@ -93,7 +93,7 @@ describe "Reprise d'une fiche NOALYSS aux valeurs refusées" do
     migration.run.should be_true
     view = Partiduo::Api::Cards.card_by_code(actor, "CEDRE").present!
     view.vat_number.should eq("")
-    view.extra["noalyss_13"].as_s.should eq("FR00123")
+    view.extra["legacy_13"].as_s.should eq("FR00123")
     migration.notes.any?(&.includes?("vat_number « FR00123 » refusé")).should be_true
   end
 end

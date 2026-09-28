@@ -1,13 +1,13 @@
 -- SPDX-License-Identifier: AGPL-3.0-or-later
 --
--- Données de démonstration d'un dossier NOALYSS (modèle français mod2,
+-- Données de démonstration d'un dossier de l'application d'origine (modèle français mod2,
 -- DBVERSION 208) : un exercice 2024 complet d'une petite société de
 -- conseil — à-nouveaux, ventes (dont un avoir), achats, extraits bancaires,
 -- salaires, emprunt —, lettrage des tiers (dont un règlement partiel),
--- pièces jointes et analytique. Chargé par scripts/noalyss-demo après les
--- scripts SQL de noalyss-app/include/sql/mod2 et les correctifs 202 à 207.
+-- pièces jointes et analytique. Chargé par scripts/legacy-demo après les
+-- scripts SQL d'origine include/sql/mod2 et les correctifs 202 à 207.
 --
--- Écrit directement dans les tables de NOALYSS (la base source n'est pas
+-- Écrit directement dans les tables de l'application d'origine (la base source n'est pas
 -- une instance Partiduo) en respectant ses déclencheurs : lignes `jrnx`
 -- d'abord, puis l'en-tête `jrn` (contrôle d'équilibre `proc_check_balance`).
 

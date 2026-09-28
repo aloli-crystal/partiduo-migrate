@@ -10,11 +10,11 @@ nl:
         Opdrachten:
           import      neemt een dossier over in de instantie van DATABASE_URL (nieuwe instantie)
           check       controleert een bron en berekent haar cijfers, zonder iets te schrijven
-          export-fec  schrijft de FEC van een NOALYSS-databank (DBVERSION %{dbversion})
+          export-fec  schrijft de FEC van een oorspronkelijke databank (DBVERSION %{dbversion})
 
         Bronnen (import, check):
           --fec BESTAND          Frans boekingenbestand (tab of verticale streep als scheidingsteken)
-          --noalyss URL          NOALYSS-databank, via een Unix-socket: postgres:///dossier?host=/tmp
+          --legacy-db URL          Oorspronkelijke databank, via een Unix-socket: postgres:///dossier?host=/tmp
           --encoding NAAM        codering van de FEC (utf-8, iso-8859-15, windows-1252); standaard: herkend
 
         Migratie (import):
@@ -28,7 +28,7 @@ nl:
           --output MAP|BESTAND       standaard: huidige map, wettelijke naam SIRENFECJJJJMMDD.txt
           --separator tab|pipe       standaard tab
           --out-encoding NAAM        standaard iso-8859-15
-          --siren NUMMER             standaard: parameters van het NOALYSS-dossier
+          --siren NUMMER             standaard: parameters van het oorspronkelijke dossier
 
         Alle opdrachten:
           --locale TAAL          taal van de berichten en het verslag (%{locales}); standaard fr
@@ -39,15 +39,15 @@ nl:
       invalid_option: "onbekende optie: %{option}"
       missing_value: "ontbrekende waarde: %{option}"
       unexpected_argument: "onverwacht argument: %{argument}"
-      source_expected: "bron verwacht: --fec BESTAND en/of --noalyss URL"
+      source_expected: "bron verwacht: --fec BESTAND en/of --legacy-db URL"
       date_expected: "datum verwacht: %{value}"
-      noalyss_expected: "--noalyss URL verwacht"
-      no_entries: "geen enkele boeking in de NOALYSS-databank"
+      legacy_expected: "--legacy-db URL verwacht"
+      no_entries: "geen enkele boeking in de l'application d'origine-databank"
       detail_fec: "FEC"
       detail_fec_value: "%{file} (%{encoding}, scheidingsteken %{separator})"
       detail_sha256: "SHA-256-vingerafdruk van de FEC"
-      detail_noalyss: "NOALYSS-databank"
-      detail_noalyss_value: "%{description}, DBVERSION %{dbversion}"
+      detail_legacy: "Oorspronkelijke databank"
+      detail_legacy_value: "%{description}, DBVERSION %{dbversion}"
       detail_warning: "Leeswaarschuwing"
       more_problems: "… nog %{total}"
       fec_rejected: "niet-conforme FEC: %{total} gebrek(en), niets wordt geïmporteerd"
@@ -83,15 +83,15 @@ nl:
       invalid_utf8: "het bestand is geen geldige UTF-8"
       unreadable_encoding: "lezen in %{name} onmogelijk: %{message}"
       c1_characters: "C1-stuurtekens in het bestand gelezen als %{encoding}: controleer de codering (--encoding)"
-    noalyss:
-      wrong_version: "NOALYSS-databank in DBVERSION %{version}, %{expected} verwacht: werk ze eerst bij met NOALYSS"
-      unreadable: "onleesbare NOALYSS-databank (%{url}): %{message}"
-      not_unix_socket: "de NOALYSS-databank wordt niet via een Unix-socket bereikt (%{url}): gebruik bij voorkeur postgres:///databank?host=/tmp"
+    legacy:
+      wrong_version: "Oorspronkelijke databank in DBVERSION %{version}, %{expected} verwacht: werk ze eerst bij met de oorspronkelijke toepassing"
+      unreadable: "onleesbare oorspronkelijke databank (%{url}): %{message}"
+      not_unix_socket: "de l'application d'origine-databank wordt niet via een Unix-socket bereikt (%{url}): gebruik bij voorkeur postgres:///databank?host=/tmp"
     source:
       fec_description: "FEC %{name}"
-      noalyss_description: "NOALYSS-databank %{database}"
-      noalyss_description_named: "NOALYSS-databank %{database} (%{name})"
-      completed_description: "%{fec}, aangevuld met de %{noalyss}"
+      legacy_description: "Oorspronkelijke databank %{database}"
+      legacy_description_named: "Oorspronkelijke databank %{database} (%{name})"
+      completed_description: "%{fec}, aangevuld met de %{legacy}"
       entry_reference: "%{journal} nr. %{number}"
       currency_detail: "%{amount} %{code}: boeking in de boekhoudmunt geboekt, bedrag in vreemde munt niet overgenomen"
       extra_attachment_detail: "%{file} (%{type}): een Partiduo-boeking draagt slechts één bijlage"
@@ -214,7 +214,7 @@ nl:
       differences_warning: "%{total} lijn(en) met een verschil: de migratie is mislukt. Details in `ecarts.csv`."
       reading_title: "Leescontrole van de bron"
       reading_intro_fec: "De FEC wordt tijdens het lezen getotaliseerd, op de brutobedragen van elke lijn (vóór het saldo van een lijn met debet én credit); die totalen worden vergeleken met die van het model dat de migratie schrijft. Omdat debet en credit van een lijn kunnen worden gesaldeerd, gaat de vergelijking over het aantal lijnen en het saldo. Details in `lecture-source.csv`."
-      reading_intro_noalyss: "De NOALYSS-databank wordt herlezen met aggregatiequery's rechtstreeks op de boekingslijnen (`jrnx`, zoals de balans van NOALYSS), los van de query die de boekingen leest; die totalen worden vergeleken met die van het model dat de migratie schrijft. Details in `lecture-source.csv`."
+      reading_intro_legacy: "De Oorspronkelijke databank wordt herlezen met aggregatiequery's rechtstreeks op de boekingslijnen (`jrnx`, zoals de balans van de oorspronkelijke toepassing), los van de query die de boekingen leest; die totalen worden vergeleken met die van het model dat de migratie schrijft. Details in `lecture-source.csv`."
       reading_ok: "Geen verschil: %{accounts} rekening(en), %{journals} dagboek(en) en %{periods} maand(en) identiek."
       reading_failures: "%{total} lijn(en) met een verschil tussen de herlezen bron en haar model: leesfout, de migratie is mislukt."
       totals_title: "Totalen"

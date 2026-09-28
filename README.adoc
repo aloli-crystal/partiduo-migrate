@@ -2,6 +2,7 @@
 :toc: left
 :toc-title: Table des matières
 :icons: font
+:legacy-repo: https://gitlab.com/noalyss/noalyss.git
 
 Reprise d'un dossier comptable dans une instance Partiduo *neuve*
 (ADR-001 D5). Deux sources :
@@ -121,13 +122,13 @@ bin/partiduo-migrate import --fec 732829320FEC20241231.txt --dry-run --report ra
 bin/partiduo-migrate import --fec 732829320FEC20241231.txt --report rapport/
 
 # Reprise d'une base NOALYSS (écritures comprises)
-bin/partiduo-migrate import --noalyss 'postgres:///dossier_noalyss?host=/tmp' --report rapport/
+bin/partiduo-migrate import --legacy-db 'postgres:///dossier_noalyss?host=/tmp' --report rapport/
 
 # FEC complété par la base NOALYSS dont il est issu
-bin/partiduo-migrate import --fec F.txt --noalyss 'postgres:///dossier_noalyss?host=/tmp' --report rapport/
+bin/partiduo-migrate import --fec F.txt --legacy-db 'postgres:///dossier_noalyss?host=/tmp' --report rapport/
 
 # FEC d'une base NOALYSS (nom réglementaire SIRENFECAAAAMMJJ.txt)
-bin/partiduo-migrate export-fec --noalyss 'postgres:///dossier_noalyss?host=/tmp' --output .
+bin/partiduo-migrate export-fec --legacy-db 'postgres:///dossier_noalyss?host=/tmp' --output .
 ----
 
 Codes de sortie : `0` reprise réussie et réconciliée ; `1` échec (écart,
@@ -176,7 +177,7 @@ de passe.
   initial n'est mis à jour que s'il a le même taux, sinon un code suffixé
   est créé (`INT2`), de même pour deux codes source qui se confondent.
 * Fiches : complètes depuis NOALYSS (catégorie selon le modèle de fiche,
-  colonnes typées, autres attributs en attributs propres `noalyss_<ad_id>`),
+  colonnes typées, autres attributs en attributs propres `legacy_<ad_id>`),
   minimales depuis les comptes auxiliaires du FEC (catégorie selon le
   compte : 40 fournisseur, 41 client…), rattachées à leur compte.
 * Journaux : ceux de l'instance de même code sont réutilisés ; les autres
@@ -185,7 +186,7 @@ de passe.
   nettoyés se confondent (`BQ-1`, `BQ1`) restent distincts (`BQ1`, `BQ12`).
 * Écritures par `Partiduo::Api::Accounting.post_entry`, pièce de la source
   (rendue unique dans le journal au besoin), référence `fec:<journal>:<numéro>`
-  ou `noalyss:<jr_id>`, échéance et pièce jointe.
+  ou `legacy:<jr_id>`, échéance et pièce jointe.
 * Lettrages par `match_lines`, un par compte et code de lettrage (partiel si
   débit ≠ crédit ; un code réutilisé d'un compte auxiliaire à l'autre forme
   un lettrage par tiers).
@@ -202,14 +203,25 @@ ISO 8859-15, tabulation). Il est produit à l'identique par :
 
 [source,sh]
 ----
-scripts/noalyss-demo                               # base partiduo_noalyss_demo (DBVERSION 208)
-bin/partiduo-migrate export-fec --noalyss 'postgres:///partiduo_noalyss_demo?host=/tmp' --output demo/
+scripts/legacy-demo                               # base partiduo_legacy_demo (DBVERSION 208)
+bin/partiduo-migrate export-fec --legacy-db 'postgres:///partiduo_legacy_demo?host=/tmp' --output demo/
 ----
 
-`scripts/noalyss-demo` charge les scripts SQL du modèle français de NOALYSS
+`scripts/legacy-demo` charge les scripts SQL du modèle français de NOALYSS
 (`noalyss-app/include/sql/mod2`), les correctifs 202 à 207, puis
-`scripts/noalyss_demo_data.sql` (fiches, opérations, lettrage, pièces jointes,
+`scripts/legacy_demo_data.sql` (fiches, opérations, lettrage, pièces jointes,
 analytique).
+
+Le code ne cite jamais le logiciel d'origine (règle du projet : seules la
+documentation `*.adoc` et `*.md` le nomment, pour l'attribution) ; il
+parle de « base d'origine » (`legacy`). Les sources de NOALYSS
+(dépôt {legacy-repo}) sont attendues dans `../legacy-app`, à côté de ce
+dépôt, ou à l'emplacement donné par `LEGACY_APP` :
+
+[source,sh]
+----
+LEGACY_APP=../../../prod-github/noalyss/noalyss-app scripts/legacy-demo
+----
 
 Reprise de bout en bout dans une instance neuve :
 
@@ -221,15 +233,15 @@ bin/partiduo-provision --name "Atelier Démo SARL" --regime fr --siren 732829320
 cd ../partiduo-migrate
 DATABASE_URL='postgres:///partiduo_m_demo?host=/tmp' PARTIDUO_MODULES=accounting,invoicing \
   bin/partiduo-migrate import --fec demo/732829320FEC20241231.txt \
-  --noalyss 'postgres:///partiduo_noalyss_demo?host=/tmp' --report rapport-demo/
+  --legacy-db 'postgres:///partiduo_legacy_demo?host=/tmp' --report rapport-demo/
 ----
 
 == Specs
 
 Chaque agent ou job utilise sa propre base de test (nom contenant `test`),
 reconstruite par les migrations du cœur ; la base NOALYSS de démonstration
-est créée par `scripts/noalyss-demo` si elle manque (`NOALYSS_DEMO_DB`, défaut
-`partiduo_noalyss_demo`).
+est créée par `scripts/legacy-demo` si elle manque (`LEGACY_DEMO_DB`, défaut
+`partiduo_legacy_demo`).
 
 [source,sh]
 ----

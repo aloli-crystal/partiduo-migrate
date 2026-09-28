@@ -118,7 +118,7 @@ module PartiduoMigrate
       nil
     end
 
-    # Type d'un compte créé : celui de la source (NOALYSS), sinon le plus
+    # Type d'un compte créé : celui de la source (base d'origine), sinon le plus
     # précis de deux : type du compte parent dans le plan de l'instance
     # (plus long préfixe existant, hors racine de contexte) et table des
     # préfixes du plan comptable général (`PCG_KINDS`) ; à précision égale,
@@ -166,7 +166,7 @@ module PartiduoMigrate
     # initial de même code et de même taux est mis à jour (autoliquidation,
     # exigibilité) ; sinon le taux est créé, sous un code suffixé (`FRIN2`)
     # si le code est pris — par un taux initial d'un autre taux, ou par un
-    # taux déjà repris (deux codes NOALYSS qui donnent le même code). Les
+    # taux déjà repris (deux codes de la base d'origine qui donnent le même code). Les
     # codes changés vont dans les correspondances (DECISIONS D-MIG-008).
     private def import_vat_rates : Nil
       @vat_codes = {} of Int64 => String
@@ -229,7 +229,7 @@ module PartiduoMigrate
 
     # --- Exercices -------------------------------------------------------------
 
-    # Exercices de la source (base NOALYSS), puis, pour les dates
+    # Exercices de la source (base d'origine), puis, pour les dates
     # d'écritures qu'aucune période ne couvre, exercices de douze mois
     # alignés sur les exercices voisins de la source. Sans exercices dans la
     # source (FEC), exercices de douze mois déduits des dates.
@@ -304,9 +304,9 @@ module PartiduoMigrate
       end
     end
 
-    # --- Fiches (base NOALYSS) -------------------------------------------------
+    # --- Fiches (base d'origine) -------------------------------------------------
 
-    # Modèle de catégorie NOALYSS (`fiche_def_ref.frd_id`) → catégorie
+    # Modèle de catégorie de la base d'origine (`fiche_def_ref.frd_id`) → catégorie
     # initiale de Partiduo et nature.
     FRD_CATEGORIES = {9_i64 => "CUSTOMER", 8_i64 => "SUPPLIER", 4_i64 => "BANK", 1_i64 => "SALE", 2_i64 => "PURCHASE",
                       3_i64 => "EXPENSE", 16_i64 => "CONTACT", 25_i64 => "EMPLOYEE", 10_i64 => "EMPLOYEE",
@@ -315,8 +315,8 @@ module PartiduoMigrate
                  3_i64 => "item", 7_i64 => "item", 13_i64 => "item", 16_i64 => "contact", 25_i64 => "employee",
                  10_i64 => "employee", 11_i64 => "employee", 12_i64 => "employee"}
 
-    # Attributs NOALYSS (`attr_def.ad_id`) repris dans une colonne typée ;
-    # les autres vont dans les attributs propres (`noalyss_<ad_id>`).
+    # Attributs de la base d'origine (`attr_def.ad_id`) repris dans une colonne typée ;
+    # les autres vont dans les attributs propres (`legacy_<ad_id>`).
     TYPED_ATTRIBUTES = {1_i64, 2_i64, 3_i64, 5_i64, 6_i64, 7_i64, 9_i64, 12_i64, 13_i64, 14_i64, 15_i64, 16_i64,
                         17_i64, 18_i64, 23_i64, 24_i64, 55_i64, 56_i64, 57_i64}
     COUNTRIES = {"FRANCE" => "FR", "BELGIQUE" => "BE", "BELGIË" => "BE", "BELGIUM" => "BE", "LUXEMBOURG" => "LU",
@@ -356,8 +356,8 @@ module PartiduoMigrate
       result
     end
 
-    # Ajoute à la catégorie les attributs NOALYSS `ids` qu'elle n'a pas
-    # encore (texte, clé `noalyss_<ad_id>`).
+    # Ajoute à la catégorie les attributs d'origine `ids` qu'elle n'a pas
+    # encore (texte, clé `legacy_<ad_id>`).
     private def ensure_attributes(category : Api::Cards::CategoryView, ids : Array(Int64)) : Api::Cards::CategoryView
       input = category.to_input
       known = input.attributes.map(&.key).to_set
@@ -376,12 +376,12 @@ module PartiduoMigrate
     # Prénom (`ad_id` 32) : attribut `first_name` des catégories qui l'ont.
     private def attribute_key(category : Api::Cards::CategoryView, id : Int64) : String
       return "first_name" if id == 32 && category.attributes.any?(&.key.==("first_name"))
-      "noalyss_#{id}"
+      "legacy_#{id}"
     end
 
     ADDRESS_ATTRIBUTES = {14_i64, 15_i64, 24_i64, 16_i64}
 
-    # Fiche en préparation : colonnes typées (champ → attribut NOALYSS et
+    # Fiche en préparation : colonnes typées (champ → attribut d'origine et
     # valeur), attributs propres, adresse. Une valeur refusée par le socle
     # passe en attribut propre (`degrade`).
     private class CardDraft
@@ -528,7 +528,7 @@ module PartiduoMigrate
 
     # --- Tiers du FEC ----------------------------------------------------------
 
-    # Comptes auxiliaires sans fiche NOALYSS : fiche minimale (nom, code),
+    # Comptes auxiliaires sans fiche de la base d'origine : fiche minimale (nom, code),
     # catégorie déduite du compte, rattachée au compte le plus mouvementé.
     private def import_parties : Nil
       lines_by_aux = Hash(String, Array(Source::Line)).new { |hash, key| hash[key] = [] of Source::Line }
@@ -659,7 +659,7 @@ module PartiduoMigrate
       end
     end
 
-    # Fiche Banque d'un journal financier : celle de la source (NOALYSS),
+    # Fiche Banque d'un journal financier : celle de la source (base d'origine),
     # sinon celle du compte de trésorerie le plus mouvementé, créée au
     # besoin. Une fiche citée par le compte mais introuvable est ignorée.
     private def bank_card_for(journal : Source::Journal, entries : Array(Source::Entry)) : String?
@@ -702,7 +702,7 @@ module PartiduoMigrate
             label: line.label == entry.label ? "" : line.label[0, 255],
           )
         end
-        source = (entry.origin ? "noalyss:#{entry.origin}" : "fec:#{entry.journal_code}:#{entry.number}")[0, 100]
+        source = (entry.origin ? "legacy:#{entry.origin}" : "fec:#{entry.journal_code}:#{entry.number}")[0, 100]
         input = Accounting::EntryInput.new(ledger_id: ledger_id, date: entry.date, lines: lines,
           label: entry.label[0, 255], receipt: receipt, due_date: entry.due_date, attachment_id: attachment_id,
           source: source)
@@ -757,7 +757,7 @@ module PartiduoMigrate
 
     # --- Fin de reprise --------------------------------------------------------
 
-    # Périodes closes dans la source (NOALYSS), fermées après les écritures.
+    # Périodes closes dans la source (base d'origine), fermées après les écritures.
     # Une période de l'instance n'est fermée que si toutes les périodes de
     # la source qu'elle recouvre sont closes : la période de clôture d'un
     # jour (31/12, option « 13 périodes »), close seule, ne ferme pas

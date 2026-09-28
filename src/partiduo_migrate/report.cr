@@ -251,7 +251,7 @@ module PartiduoMigrate
       sections = comparison.reading
       return if sections.empty?
       io << "== " << t("reading_title") << "\n\n"
-      io << t(sections.first.columns.size > 2 ? "reading_intro_noalyss" : "reading_intro_fec") << "\n\n"
+      io << t(sections.first.columns.size > 2 ? "reading_intro_legacy" : "reading_intro_fec") << "\n\n"
       failures = sections.sum { |section| section.rows.count { |row| !row.ok? } }
       if failures.zero?
         io << t("reading_ok", accounts: sections[0].rows.size, journals: sections[1].rows.size,

@@ -5,8 +5,8 @@ module PartiduoMigrate
     # Écriture d'un FEC à partir d'un `Source::Dataset` : les dix-huit zones
     # de l'article A47 A-1, une ligne par ligne d'écriture, dans l'ordre des
     # écritures. Sert à produire le FEC de démonstration depuis une base
-    # NOALYSS (`partiduo-migrate export-fec`). Comme l'export FEC de
-    # NOALYSS (`noalyss-export`), `EcritureLib` porte le libellé de
+    # d'origine (`partiduo-migrate export-fec`). Comme l'export FEC de
+    # l'application d'origine, `EcritureLib` porte le libellé de
     # l'opération ; à la différence de lui, le lettrage est écrit
     # (`EcritureLet`, `DateLet`).
     class Writer
