@@ -34,10 +34,11 @@ jobs:
   specs:
     name: Specs
     runs-on: ubuntu-latest
-    container: crystallang/crystal:1.19.1
     services:
       postgres:
         image: postgres:18
+        ports:
+          - 5432:5432
         env:
           POSTGRES_USER: partiduo
           POSTGRES_PASSWORD: partiduo
@@ -49,16 +50,25 @@ jobs:
           --health-retries 10
     env:
       # En CI seulement, PostgreSQL est un service joignable en TCP.
-      DATABASE_URL: postgres://partiduo:partiduo@postgres:5432/partiduo_test
-      NOALYSS_DEMO_URL: postgres://partiduo:partiduo@postgres:5432/partiduo_noalyss_demo
-      PGHOST: postgres
+      DATABASE_URL: postgres://partiduo:partiduo@localhost:5432/partiduo_test
+      NOALYSS_DEMO_URL: postgres://partiduo:partiduo@localhost:5432/partiduo_noalyss_demo
+      PGHOST: localhost
       PGUSER: partiduo
       PGPASSWORD: partiduo
       NOALYSS_APP: ${{ github.workspace }}/../noalyss/noalyss-app
     steps:
       - uses: actions/checkout@v4
+      - name: Mémoire d'échange (la compilation des specs dépasse 6 Go)
+        run: |
+          sudo fallocate -l 12G /swap-ci && sudo chmod 600 /swap-ci
+          sudo mkswap /swap-ci && sudo swapon /swap-ci && free -h
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: 1.19.1
+      - name: Bibliothèques de compilation
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libyaml-dev libssl-dev libgmp-dev libxml2-dev libpcre2-dev
       - name: Client PostgreSQL (scripts/noalyss-demo)
-        run: apt-get update && apt-get install -y --no-install-recommends postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
       - name: Sources SQL de NOALYSS (lecture seule)
         run: git clone --depth 1 "${NOALYSS_REPO:-https://gitlab.com/noalyss/noalyss.git}" ../noalyss/noalyss-app
       - name: Dépendances path (cœur, shards maison)
