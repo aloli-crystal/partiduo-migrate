@@ -68,4 +68,4 @@ jobs:
       - name: Base NOALYSS de démonstration
         run: scripts/noalyss-demo partiduo_noalyss_demo
       - name: Specs
-        run: crystal spec --order random
+        run: crystal spec --order random --no-debug --threads 2
