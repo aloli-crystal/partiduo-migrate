@@ -57,7 +57,6 @@ module PartiduoMigrate
 
     def run : Nil
       import_accounts
-      chart_before
       import_vat_rates
       import_fiscal_years
       import_cards
@@ -476,12 +475,11 @@ module PartiduoMigrate
       errors = [] of Api::FieldError
       3.times do
         category = ensure_attributes(category, draft.extra.keys)
-        result = Api::Cards.create_card(@actor, card_input(card, category, code, draft))
+        result = create_card(card_input(card, category, code, draft), card.account, card.code)
         if view = result.value?
           notes.concat(draft.notes)
           mapping.cards[card.code] = view.code
           counts["cards_created"] += 1
-          assign_account(view.id, view.code, card.account, created: true)
           return category
         end
         errors = result.errors
@@ -513,26 +511,25 @@ module PartiduoMigrate
       )
     end
 
-    # Rattache une fiche au compte de la source. Une fiche *créée par la
-    # reprise* a pu recevoir de l'abonné `card.saved` de la Comptabilité un
-    # compte calculé (`account_compute`) : il est remplacé par celui de la
-    # source, puis effacé s'il vient d'être créé (DECISIONS D-MIG-006).
-    private def assign_account(card_id : Int64, code : String, account : String?, created : Bool = false) : Nil
-      return if account.nil?
-      target = mapping.account(account)
-      current = Accounting.card_account(@actor, card_id).try(&.account)
-      return if current && (!created || current.number == target)
-      input = Accounting::AssignCardAccountInput.new(card_id: card_id, account: target)
-      check(Accounting.assign_card_account(@actor, input), "card_account", code) || return
-      return if current.nil? || chart_before.includes?(current.number)
-      check(Accounting.delete_account(@actor, current.id), "computed_account", current.number, blocking: false)
+    # Crée une fiche avec le compte de la source, en une commande du contrat
+    # (`create_card(…, account:)`, DECISIONS D-MIG-006) : aucun compte
+    # calculé n'est créé. Compte refusé par la Comptabilité : consigné, et
+    # la fiche créée sans lui (compte que prévoit sa catégorie).
+    private def create_card(input : Api::Cards::CardInput, account : String?,
+                            reference : String) : Api::Result(Api::Cards::CardView)
+      target = account.try { |number| mapping.account(number) }
+      result = Api::Cards.create_card(@actor, input, account: target)
+      return result if target.nil? || result.success? || !result.errors.all?(&.field.==("account"))
+      problem("card_account", reference, result.errors)
+      Api::Cards.create_card(@actor, input)
     end
 
-    @chart_before : Set(String)? = nil
-
-    # Comptes de l'instance avant la création des fiches.
-    private def chart_before : Set(String)
-      @chart_before ||= Accounting.chart(@actor).map(&.account.number).to_set
+    # Rattache une fiche déjà présente dans l'instance (jeu initial) au
+    # compte de la source, si elle n'en a pas.
+    private def assign_account(card_id : Int64, code : String, account : String?) : Nil
+      return if account.nil? || Accounting.card_account(@actor, card_id)
+      input = Accounting::AssignCardAccountInput.new(card_id: card_id, account: mapping.account(account))
+      check(Accounting.assign_card_account(@actor, input), "card_account", code)
     end
 
     # --- Tiers du FEC ----------------------------------------------------------
@@ -559,10 +556,9 @@ module PartiduoMigrate
         next problem("party", aux, [Api::FieldError.base("cards.errors.card.category_id.not_found")]) if category.nil?
         input = Api::Cards::CardInput.new(category_id: category.id, name: (label.strip.presence || aux)[0, 255],
           code: code.presence)
-        view = check(Api::Cards.create_card(@actor, input), "party", aux) || next
+        view = check(create_card(input, account, aux), "party", aux) || next
         mapping.cards[aux] = view.code
         counts["cards_created"] += 1
-        assign_account(view.id, view.code, account, created: true)
       end
     end
 
@@ -686,9 +682,8 @@ module PartiduoMigrate
       end
       category = Api::Cards.category_by_code(@actor, "BANK") || return
       input = Api::Cards::CardInput.new(category_id: category.id, name: "#{journal.label.presence || journal.code} (#{target})"[0, 255])
-      card = check(Api::Cards.create_card(@actor, input), "bank_card", journal.code) || return
+      card = check(create_card(input, account, journal.code), "bank_card", journal.code) || return
       counts["cards_created"] += 1
-      assign_account(card.id, card.code, account, created: true)
       card.code
     end
 

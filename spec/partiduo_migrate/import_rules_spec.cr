@@ -42,6 +42,22 @@ describe "Règles de reprise d'un FEC" do
     comparison.before.ageing["C2"].over_60.should eq(BigDecimal.new(140))
   end
 
+  it "crée chaque fiche avec le compte de la source en une commande, sans compte calculé (D-MIG-006)" do
+    PartiduoMigrate::SpecSupport.provision!
+    before = Partiduo::Api::Accounting.chart(actor).map(&.account.number).to_set
+    migration = PartiduoMigrate::Migration.new(B.dataset(reused_letters))
+    migration.run.should be_true
+    migration.problems.should be_empty
+    %w[C1 C2].each do |code|
+      card = Partiduo::Api::Cards.card_by_code(actor, code).present!
+      Partiduo::Api::Accounting.card_account(actor, card.id).present!.account.number.should eq("411000")
+    end
+    # Seuls les comptes du FEC s'ajoutent au plan : ni 4100002 ni autre
+    # compte calculé sous le compte de base des clients ou de la banque.
+    added = Partiduo::Api::Accounting.chart(actor).map(&.account.number).to_set - before
+    added.to_a.sort!.should eq(%w[411000 445710 512000 706000])
+  end
+
   it "déduit la nature des journaux et crée la fiche Banque du journal financier" do
     PartiduoMigrate::SpecSupport.provision!
     rows = reused_letters + [

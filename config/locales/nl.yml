@@ -115,7 +115,6 @@ nl:
       card_category: "fichecategorie"
       card: "fiche"
       card_account: "rekening van de fiche"
-      computed_account: "berekende rekening"
       party: "derde"
       ledger: "dagboek"
       bank_card: "bankfiche"

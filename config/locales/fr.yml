@@ -115,7 +115,6 @@ fr:
       card_category: "catégorie de fiches"
       card: "fiche"
       card_account: "compte de fiche"
-      computed_account: "compte calculé"
       party: "tiers"
       ledger: "journal"
       bank_card: "fiche Banque"
