@@ -6,7 +6,7 @@ module PartiduoMigrate
   # Rapport de réconciliation écrit dans un dossier : `rapport.adoc`
   # (lisible, publiable) et un CSV par tableau (`balance-generale.csv`,
   # `balance-agee.csv`, `journaux.csv`, `periodes.csv`, `fec-relu.csv`,
-  # `editions.csv`, `lecture-source.csv`, `ecarts.csv`, `anomalies.csv`,
+  # `editions.csv`, `analytique.csv`, `lecture-source.csv`, `ecarts.csv`, `anomalies.csv`,
   # `correspondances.csv`, `non-repris.csv`).
   # Textes dans la langue active (`--locale`) ; noms de fichiers fixes.
   # Montants à point décimal dans les CSV, à virgule dans l'AsciiDoc. Les
@@ -14,7 +14,8 @@ module PartiduoMigrate
   # formule par un tableur (`cell`).
   class Report
     FILES = {"accounts" => "balance-generale.csv", "ageing" => "balance-agee.csv", "journals" => "journaux.csv",
-             "periods" => "periodes.csv", "fec_accounts" => "fec-relu.csv", "editions" => "editions.csv"}
+             "periods" => "periodes.csv", "fec_accounts" => "fec-relu.csv", "editions" => "editions.csv",
+             "analytic" => "analytique.csv"}
 
     getter directory : String
 
@@ -189,8 +190,9 @@ module PartiduoMigrate
       differences(io, comparison)
       reading(io, comparison)
       {"total" => "totals_title", "accounts" => "accounts_title", "ageing" => "ageing_title",
-       "journals" => "journals_title", "periods" => "periods_title"}.each do |key, title|
+       "journals" => "journals_title", "periods" => "periods_title", "analytic" => "analytic_title"}.each do |key, title|
         section = comparison.section(key) || next
+        next if key == "analytic" && section.rows.empty?
         key == "ageing" ? ageing_table(io, comparison, section) : totals_table(io, t(title), section)
       end
       editions(io, comparison)
@@ -329,7 +331,8 @@ module PartiduoMigrate
         io << "|" << escape(row.key)
         io << " |" << escape(row.label) if section.labelled
         (row.before + row.after).each_with_index do |value, index|
-          io << " |" << (index % section.columns.size == 0 ? count(value) : amount(value))
+          counted = index % section.columns.size == 0 && section.key != "analytic"
+          io << " |" << (counted ? count(value) : amount(value))
         end
         io << " |" << (row.ok? ? t("ok") : "*#{t("difference")}*") << "\n"
       end

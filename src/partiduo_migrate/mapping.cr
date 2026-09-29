@@ -16,6 +16,12 @@ module PartiduoMigrate
     getter lines = {} of {Int32, Int32} => Int64
     # Pièces renommées : `{journal, pièce source, pièce retenue}`.
     getter receipts = [] of {String, String, String}
+    # Écriture source (rang) → identifiant de l'écriture créée.
+    getter entry_ids = {} of Int32 => Int64
+    # Poste analytique source `{plan, poste}` → `{plan, code}` de l'instance.
+    getter analytic_posts = {} of {String, String} => {String, String}
+    # Imputations analytiques écrites par la reprise (chiffres « avant »).
+    getter analytic_rows = [] of Source::AnalyticRow
 
     def account(number : String) : String
       accounts[number]? || number

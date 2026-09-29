@@ -14,10 +14,12 @@ module PartiduoMigrate
     # Lecture d'une base d'origine (dossier) en DBVERSION 208, en lecture
     # seule : écritures (comme la vue `v_fec_operation` de l'export FEC d'origine,
     # lettrage et échéance en plus), plan comptable, journaux, fiches
-    # complètes, taux de TVA, exercices et périodes, pièces jointes.
-    # L'analytique est relevée pour le rapport (aucun contrat Partiduo ne la
-    # reçoit encore). Les utilisateurs, leurs droits et leurs secrets ne
-    # sont jamais lus (ADR-001 D5, ADR-002).
+    # complètes, taux de TVA, exercices et périodes, pièces jointes,
+    # analytique, stock, prévisions et suivi (DECISIONS D-R5-011 à
+    # D-R5-014). Les utilisateurs, leurs droits et leurs secrets ne sont
+    # jamais lus (ADR-001 D5, ADR-002) ; des droits par dépôt et de la
+    # visibilité des actions, seule l'existence est relevée, pour avertir
+    # (BLOCAGES B-SEC-001).
     class Database
       getter url : String
       # Avertissements de connexion (URL hors socket Unix).
@@ -52,7 +54,10 @@ module PartiduoMigrate
           read_entries(db, dataset)
           read_control(db, dataset)
           read_attachments(db, dataset) if with_attachments
-          read_unported(db, dataset)
+          read_analytic(db, dataset)
+          read_stock(db, dataset)
+          read_forecasts(db, dataset)
+          read_followup(db, dataset)
           dataset
         end
       rescue ex : DB::ConnectionRefused | Socket::Error | PQ::PQError
@@ -192,12 +197,12 @@ module PartiduoMigrate
       # Exercices et leurs périodes (`parm_periode`), dans l'ordre des dates.
       private def read_fiscal_years(db, dataset) : Nil
         years = [] of {String, String, Array(Source::Period)}
-        sql = "SELECT p_exercice, coalesce(p_exercice_label, p_exercice), p_start, p_end, coalesce(p_closed, false) " \
+        sql = "SELECT p_exercice, coalesce(p_exercice_label, p_exercice), p_start, p_end, coalesce(p_closed, false), p_id " \
               "FROM parm_periode ORDER BY p_start, p_end"
         db.query_each(sql) do |result|
           id = result.read(String)
           label = result.read(String)
-          period = Source::Period.new(result.read(Time), result.read(Time), result.read(Bool))
+          period = Source::Period.new(result.read(Time), result.read(Time), result.read(Bool), result.read(Int32).to_i64)
           year = years.find { |candidate| candidate[0] == id }
           if year
             year[2] << period
@@ -352,37 +357,162 @@ module PartiduoMigrate
         end
       end
 
-      # Analytique (plans, postes, imputations) : relevée pour l'annexe.
-      private def read_unported(db, dataset) : Nil
+      # Analytique : plans, groupes, postes, imputations (lignes d'écriture
+      # et opérations diverses). Reprise par le contrat de l'Analytique
+      # (`Importer#import_analytic`).
+      private def read_analytic(db, dataset) : Nil
+        analytic = dataset.analytic
+        db.query_each("SELECT pa_name, coalesce(pa_description, '') FROM plan_analytique ORDER BY pa_id") do |result|
+          analytic.plans << Source::AnalyticPlan.new(result.read(String), result.read(String))
+        end
+        db.query_each("SELECT pa.pa_name, ga.ga_id, coalesce(ga.ga_description, '') FROM groupe_analytique ga " \
+                      "JOIN plan_analytique pa ON pa.pa_id = ga.pa_id ORDER BY ga.ga_id") do |result|
+          analytic.groups << Source::AnalyticGroup.new(result.read(String), result.read(String), result.read(String))
+        end
+        db.query_each("SELECT pa.pa_name, po.po_name, coalesce(po.po_description, ''), po.ga_id, po.po_state = 1 " \
+                      "FROM poste_analytique po JOIN plan_analytique pa ON pa.pa_id = po.pa_id ORDER BY pa.pa_name, po.po_name") do |result|
+          analytic.posts << Source::AnalyticPost.new(result.read(String), result.read(String), result.read(String),
+            result.read(String?).try(&.presence), result.read(Bool))
+        end
         sql = <<-SQL
-          SELECT pa.pa_name, po.po_name, oa.oa_amount, oa.oa_debit, oa.oa_date,
-                 coalesce(r.jr_internal, ''), coalesce(x.j_poste, ''), coalesce(oa.oa_description, '')
+          SELECT pa.pa_name, po.po_name, oa.oa_amount, oa.oa_debit, oa.oa_date, oa.j_id, coalesce(oa.oa_row, 0),
+                 oa.oa_group, coalesce(oa.oa_description, ''),
+                 (SELECT ad_value FROM fiche_detail fd WHERE fd.f_id = oa.f_id AND fd.ad_id = 23)
           FROM operation_analytique oa
           JOIN poste_analytique po ON po.po_id = oa.po_id
           JOIN plan_analytique pa ON pa.pa_id = po.pa_id
-          LEFT JOIN jrnx x ON x.j_id = oa.j_id
-          LEFT JOIN jrn r ON r.jr_grpt_id = x.j_grpt
-          ORDER BY oa.oa_date, oa.oa_id
+          ORDER BY oa.oa_date, oa.oa_group, oa.oa_row, oa.oa_id
           SQL
         db.query_each(sql) do |result|
-          plan = result.read(String)
-          post = result.read(String)
-          amount = result.read(PG::Numeric).to_big_d
-          debit = result.read(Bool)
-          date = result.read(Time)
-          internal = result.read(String)
-          account = result.read(String)
-          description = result.read(String)
-          dataset.unported << Source::Unported.new("analytic",
-            "#{internal.presence || PartiduoMigrate.t("source.no_operation")} #{account}".strip,
-            PartiduoMigrate.t("source.analytic_detail", date: date.to_s("%Y-%m-%d"), plan: plan, post: post,
-              side: PartiduoMigrate.t(debit ? "source.debit" : "source.credit"),
-              amount: Fec.format_amount(amount), description: description).strip)
+          analytic.rows << Source::AnalyticRow.new(
+            plan: result.read(String), post: result.read(String), amount: result.read(PG::Numeric).to_big_d,
+            debit: result.read(Bool), date: result.read(Time), line_row: result.read(Int32?).try(&.to_i64),
+            row: result.read(Int32), group: result.read(Int32).to_i64, description: result.read(String),
+            card: result.read(String?).try(&.strip.presence))
         end
-        db.query_each("SELECT pa.pa_name, po.po_name, coalesce(po.po_description, '') FROM poste_analytique po " \
-                      "JOIN plan_analytique pa ON pa.pa_id = po.pa_id ORDER BY pa.pa_name, po.po_name") do |result|
-          plan = result.read(String)
-          dataset.unported << Source::Unported.new("analytic_post", "#{plan}/#{result.read(String)}", result.read(String))
+      end
+
+      # Stock : dépôts, codes stock des fiches (attribut 19), mouvements
+      # (`stock_goods` : `d` entrée, `c` sortie), opérations manuelles
+      # (`stock_change`) ; droits par dépôt relevés pour avertir seulement.
+      private def read_stock(db, dataset) : Nil
+        stock = dataset.stock
+        db.query_each("SELECT r_id, coalesce(r_name, ''), coalesce(r_adress, ''), coalesce(r_city, ''), " \
+                      "coalesce(r_country, ''), coalesce(r_phone, '') FROM stock_repository ORDER BY r_id") do |result|
+          stock.repositories << Source::Repository.new(result.read(Int64), result.read(String), result.read(String),
+            result.read(String), result.read(String), result.read(String))
+        end
+        db.query_each("SELECT q.ad_value, s.ad_value FROM fiche_detail s JOIN fiche_detail q ON q.f_id = s.f_id AND q.ad_id = 23 " \
+                      "WHERE s.ad_id = 19 AND coalesce(trim(s.ad_value), '') <> ''") do |result|
+          stock.codes[result.read(String).strip] = result.read(String).strip
+        end
+        sql = <<-SQL
+          SELECT g.r_id, q.ad_value, g.sg_quantity, g.sg_type, coalesce(g.sg_date, r.jr_date, c.c_date), coalesce(g.sg_comment, ''),
+                 g.c_id, r.jr_id, coalesce(c.c_comment, '')
+          FROM stock_goods g
+          JOIN fiche_detail q ON q.f_id = g.f_id AND q.ad_id = 23
+          LEFT JOIN stock_change c ON c.c_id = g.c_id
+          LEFT JOIN jrnx x ON x.j_id = g.j_id
+          LEFT JOIN jrn r ON r.jr_grpt_id = x.j_grpt
+          WHERE g.r_id IS NOT NULL AND g.sg_quantity <> 0
+          ORDER BY 5, g.sg_id
+          SQL
+        db.query_each(sql) do |result|
+          repository = result.read(Int64)
+          card = result.read(String).strip
+          quantity = result.read(PG::Numeric).to_big_d.abs
+          outgoing = result.read(String) == "c"
+          date = result.read(Time?) || next
+          stock.movements << Source::StockMovement.new(repository, card, outgoing ? -quantity : quantity, date,
+            result.read(String), result.read(Int64?), result.read(Int32?).try(&.to_i64), result.read(String))
+        end
+        stock.repository_rights = db.query_one("SELECT count(*) FROM profile_sec_repository", as: Int64).to_i32
+      end
+
+      # Prévisions : périodes de la prévision et d'un élément par
+      # identifiant de période (`parm_periode.p_id`).
+      private def read_forecasts(db, dataset) : Nil
+        periods = dataset.fiscal_years.flat_map(&.periods).index_by(&.id)
+        items = Hash(Int64, Array(Source::ForecastItem)).new { |hash, key| hash[key] = [] of Source::ForecastItem }
+        db.query_each("SELECT fc_id, coalesce(fi_text, ''), coalesce(fi_account, ''), coalesce(fi_amount, 0), " \
+                      "coalesce(fi_amount_initial, 0), coalesce(fi_order, 0), coalesce(fi_pid, 0) FROM forecast_item " \
+                      "ORDER BY fc_id, fi_order, fi_id") do |result|
+          category = result.read(Int32?).try(&.to_i64) || next
+          label, formula = result.read(String), result.read(String)
+          amount, initial = result.read(PG::Numeric).to_big_d, result.read(PG::Numeric).to_big_d
+          position, pid = result.read(Int32), result.read(Int32).to_i64
+          items[category] << Source::ForecastItem.new(label, formula, amount, initial, position, periods[pid]?)
+        end
+        categories = Hash(Int64, Array(Source::ForecastCategory)).new { |hash, key| hash[key] = [] of Source::ForecastCategory }
+        db.query_each("SELECT f_id, fc_id, fc_desc, fc_order FROM forecast_category ORDER BY f_id, fc_order, fc_id") do |result|
+          forecast = result.read(Int64)
+          id = result.read(Int32).to_i64
+          categories[forecast] << Source::ForecastCategory.new(result.read(String), result.read(Int32), items[id])
+        end
+        db.query_each("SELECT f_id, f_name, f_start_date, f_end_date FROM forecast ORDER BY f_id") do |result|
+          id = result.read(Int32).to_i64
+          name = result.read(String)
+          first = result.read(Int64?).try { |pid| periods[pid]? }
+          last = result.read(Int64?).try { |pid| periods[pid]? }
+          dataset.forecasts << Source::Forecast.new(name, first, last, categories[id])
+        end
+      end
+
+      # États de l'application d'origine (`document_state`) → états du cœur.
+      STATES = {1 => "closed", 2 => "follow", 3 => "todo", 4 => "abandoned"}
+
+      # Suivi : types (`document_type`), étiquettes, actions, fiches
+      # concernées, commentaires, actions liées.
+      private def read_followup(db, dataset) : Nil
+        followup = dataset.followup
+        db.query_each("SELECT dt_id, coalesce(dt_value, ''), coalesce(dt_prefix, '') FROM document_type ORDER BY dt_id") do |result|
+          followup.types << Source::ActionType.new(result.read(Int32).to_i64, result.read(String), result.read(String))
+        end
+        db.query_each("SELECT t_id, t_tag, coalesce(t_description, ''), coalesce(t_actif, 'Y') = 'Y', coalesce(t_color, 1) " \
+                      "FROM tags ORDER BY t_id") do |result|
+          followup.tags << Source::Tag.new(result.read(Int32).to_i64, result.read(String), result.read(String),
+            result.read(Bool), result.read(Int32))
+        end
+        comments = Hash(Int64, Array(Source::ActionComment)).new { |hash, key| hash[key] = [] of Source::ActionComment }
+        db.query_each("SELECT ag_id, agc_date, coalesce(agc_comment_raw, agc_comment, ''), coalesce(tech_user, '') " \
+                      "FROM action_gestion_comment WHERE ag_id IS NOT NULL ORDER BY agc_date, agc_id") do |result|
+          comments[result.read(Int64)] << Source::ActionComment.new(result.read(Time), result.read(String), result.read(String))
+        end
+        persons = Hash(Int64, Array(String)).new { |hash, key| hash[key] = [] of String }
+        db.query_each("SELECT ap.ag_id, q.ad_value FROM action_person ap JOIN fiche_detail q ON q.f_id = ap.f_id AND q.ad_id = 23 " \
+                      "ORDER BY ap.ap_id") do |result|
+          persons[result.read(Int32).to_i64] << result.read(String).strip
+        end
+        tags = Hash(Int64, Array(Int64)).new { |hash, key| hash[key] = [] of Int64 }
+        db.query_each("SELECT ag_id, t_id FROM action_tags WHERE ag_id IS NOT NULL AND t_id IS NOT NULL ORDER BY at_id") do |result|
+          tags[result.read(Int32).to_i64] << result.read(Int32).to_i64
+        end
+        sql = <<-SQL
+          SELECT a.ag_id, a.ag_type, coalesce(a.ag_ref, ''), coalesce(a.ag_title, ''), a.ag_timestamp, coalesce(a.ag_hour, ''),
+                 coalesce(a.ag_priority, 2), a.ag_state, a.ag_remind_date,
+                 (SELECT ad_value FROM fiche_detail fd WHERE fd.f_id = a.f_id_dest AND fd.ad_id = 23),
+                 (SELECT ad_value FROM fiche_detail fd WHERE fd.f_id = a.ag_contact AND fd.ad_id = 23),
+                 a.ag_dest
+          FROM action_gestion a WHERE a.ag_type IS NOT NULL ORDER BY a.ag_timestamp, a.ag_id
+          SQL
+        db.query_each(sql) do |result|
+          id = result.read(Int32).to_i64
+          type = result.read(Int32).to_i64
+          reference, title = result.read(String), result.read(String)
+          date = result.read(Time?) || Time.utc
+          hour = result.read(String)
+          priority = result.read(Int32).clamp(1, 3)
+          state = STATES[result.read(Int32?) || 3]? || "todo"
+          remind = result.read(Time?)
+          card, contact = result.read(String?).try(&.strip.presence), result.read(String?).try(&.strip.presence)
+          restricted = result.read(Int64) != -1
+          followup.actions << Source::Action.new(id: id, type: type, reference: reference, title: title,
+            date: Time.utc(date.year, date.month, date.day), hour: hour, priority: priority, state: state,
+            remind_on: remind, card: card, contact: contact, concerned: persons[id], tags: tags[id],
+            comments: comments[id], restricted: restricted)
+        end
+        db.query_each("SELECT aga_least, aga_greatest FROM action_gestion_related ORDER BY aga_id") do |result|
+          followup.related << {result.read(Int64), result.read(Int64)}
         end
       end
     end

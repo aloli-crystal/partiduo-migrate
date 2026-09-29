@@ -58,9 +58,24 @@ describe "Reprise d'une base d'origine" do
     ageing = migration.comparison.present!.after.ageing["DUNE"]
     ageing.not_due.should eq(BigDecimal.new("3600.00"))
 
-    # Analytique relevée, non reprise (pas encore de contrat).
-    dataset.unported.count(&.kind.==("analytic")).should eq(18)
-    dataset.unported.count(&.kind.==("analytic_post")).should eq(3)
+    # Analytique reprise par le contrat de l'Analytique, réconciliée par
+    # poste (D-R5-011) ; plus rien en annexe.
+    dataset.unported.count(&.kind.==("analytic")).should eq(0)
+    {migration.counts["analytic_plans"], migration.counts["analytic_posts"], migration.counts["analytic_lines"]}
+      .should eq({1, 3, 18})
+    analytic = migration.comparison.present!.section("analytic").present!
+    analytic.rows.map(&.key).should eq(["ACTIVITÉS/CONSEIL", "ACTIVITÉS/EDITION", "ACTIVITÉS/FORMATION"])
+    analytic.rows.all?(&.ok?).should be_true
+    plan = Partiduo::Api::Analytic.plans(actor).first
+    balance = Partiduo::Api::Analytic.balance(actor, Partiduo::Api::Analytic::ReportQuery.new(plan_id: plan.id))
+    balance.total.credit.should eq(dataset.analytic.rows.sum(BigDecimal.new(0), &.amount))
+
+    # Numéros de relevé du journal financier : relevés rapprochés (D-R5-012).
+    ledger = Partiduo::Api::Accounting.ledgers(actor).find!(&.code.==("F01"))
+    statements = Partiduo::Api::Accounting.bank_statements(actor, ledger.id)
+    statements.size.should eq(migration.counts["statements"])
+    statements.size.should be > 0
+    Partiduo::Api::Accounting.reconciliation(actor, ledger.id).unreconciled.should be_empty
 
     # Les utilisateurs de l'application d'origine ne sont jamais repris.
     Partiduo::Api::Auth.users(actor).should be_empty

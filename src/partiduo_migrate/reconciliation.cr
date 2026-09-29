@@ -86,6 +86,9 @@ module PartiduoMigrate
       getter ageing = {} of String => Ageing
       getter labels = {} of String => String
       getter fec_accounts = Hash(String, Totals).new(Totals.new)
+      # Analytique : débit et crédit par poste (`plan/poste`), imputations
+      # reprises (avant) face aux balances analytiques de l'instance (après).
+      getter analytic = Hash(String, Totals).new(Totals.new)
       getter statements = [] of {String, BigDecimal}
       getter unmapped = [] of String
       property entries = 0
@@ -124,6 +127,11 @@ module PartiduoMigrate
         end
       end
       source_ageing(dataset, mapping, as_of).each { |code, ageing| figures.ageing[code] = ageing }
+      mapping.analytic_rows.each do |row|
+        plan, code = mapping.analytic_posts[{row.plan, row.post}]? || {row.plan, row.post}
+        key = "#{plan}/#{code}"
+        figures.analytic[key] = figures.analytic[key].add(row.debit ? row.amount : ZERO, row.debit ? ZERO : row.amount, 0)
+      end
       figures
     end
 
@@ -265,7 +273,23 @@ module PartiduoMigrate
 
       reexport(figures, actor, from, to)
       statements(figures, actor, from, to)
+      analytic(figures, actor, from, to)
       figures
+    end
+
+    # Balances analytiques de l'instance, plan par plan (module actif).
+    private def self.analytic(figures : Figures, actor : Partiduo::Api::Actor, from : Time, to : Time) : Nil
+      return unless Partiduo::Api::Modules.get(actor, "ANALYTIC").active
+      Partiduo::Api::Analytic.plans(actor).each do |plan|
+        balance = Partiduo::Api::Analytic.balance(actor, Partiduo::Api::Analytic::ReportQuery.new(plan_id: plan.id,
+          date_from: from, date_to: to))
+        balance.rows.each do |row|
+          next if row.amounts.debit.zero? && row.amounts.credit.zero?
+          figures.analytic["#{plan.name}/#{row.post.code}"] = Totals.new(row.amounts.debit, row.amounts.credit, 0)
+        end
+      end
+    rescue Partiduo::Api::NotFound
+      nil
     end
 
     # FEC de chaque exercice de l'instance qui recouvre la période, relu par
@@ -400,7 +424,17 @@ module PartiduoMigrate
          Section.new("periods", %w[entries debit credit], periods),
          Section.new("total", %w[entries debit credit], [totals]),
          Section.new("fec_accounts", %w[lines debit credit balance], fec_accounts, labelled: true),
-         Section.new("editions", %w[value], editions)] + reading
+         Section.new("editions", %w[value], editions),
+         Section.new("analytic", %w[debit credit balance], analytic)] + reading
+      end
+
+      # Analytique par poste : débit, crédit, solde.
+      def analytic : Array(Row)
+        (before.analytic.keys + after.analytic.keys).uniq.sort!.map do |key|
+          a = before.analytic[key]? || Totals.new
+          b = after.analytic[key]? || Totals.new
+          Row.new(key, "", [a.debit, a.credit, a.balance], [b.debit, b.credit, b.balance])
+        end
       end
 
       def section(key : String) : Section?

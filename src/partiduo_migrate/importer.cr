@@ -9,7 +9,8 @@ module PartiduoMigrate
   # l'instance s'appliquent aux données reprises comme à la saisie.
   #
   # Ordre : comptes, taux de TVA, exercices, catégories et fiches, journaux,
-  # pièces jointes et écritures, lettrages, périodes closes, fiches
+  # pièces jointes et écritures, lettrages, analytique, relevés bancaires,
+  # stock, prévisions, suivi (`importer_extras.cr`), périodes closes, fiches
   # désactivées. Chaque refus devient un `Problem` ; l'appelant
   # (`Migration`) décide d'annuler.
   class Importer
@@ -64,6 +65,14 @@ module PartiduoMigrate
       import_journals
       import_entries
       import_matchings
+      # Après les écritures, *avant* la clôture des périodes reprises : une
+      # période close refuse ventilations, relevés et mouvements
+      # (BLOCAGES B-MIG-001, B-CRIT-003).
+      import_analytic
+      import_statements
+      import_stock
+      import_forecasts
+      import_followup
       close_periods
       disable_cards
     end
@@ -708,6 +717,7 @@ module PartiduoMigrate
           source: source)
         view = check(Accounting.post_entry(@actor, input), "entry", entry.reference) || next
         counts["entries_created"] += 1
+        mapping.entry_ids[index] = view.id
         view.lines.sort_by!(&.position).each_with_index do |line, position|
           mapping.lines[{index, position}] = line.id
         end

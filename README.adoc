@@ -12,8 +12,8 @@ Reprise d'un dossier comptable dans une instance Partiduo *neuve*
   écritures, tiers, lettrage ;
 * une *base NOALYSS* en DBVERSION 208, pour ce que le FEC ne porte pas :
   fiches complètes, paramètres de TVA, exercices et périodes closes,
-  échéances, pièces jointes (l'analytique est relevée en annexe tant que le
-  module n'a pas de contrat, lot 5). Les utilisateurs de NOALYSS, leurs
+  échéances, pièces jointes, analytique, numéros de relevé des journaux
+  financiers, stock, prévisions et suivi. Les utilisateurs de NOALYSS, leurs
   droits et leurs secrets ne sont *jamais* lus : chacun s'enrôle sur
   l'instance (ADR-002).
 
@@ -73,11 +73,12 @@ Fichiers écrits dans le dossier `--report` :
 |`journaux.csv`, `periodes.csv` |totaux par journal et par mois
 |`fec-relu.csv` |FEC réexporté par l'instance et relu, par compte, face à la source
 |`editions.csv` |contrôles des éditions de l'instance
+|`analytique.csv` |par poste analytique (`PLAN/POSTE`) : débit, crédit et solde des imputations reprises, face aux balances analytiques de l'instance
 |`lecture-source.csv` |contrôle de lecture : source relue face au modèle, par compte, journal et mois
 |`ecarts.csv` |chaque valeur en écart (vide si la reprise réconcilie)
 |`anomalies.csv` |refus de l'instance, bloquants ou non
 |`correspondances.csv` |identifiants changés (comptes normalisés, codes de journal et de taux de TVA, quick codes, pièces rendues uniques)
-|`non-repris.csv` |analytique, pièces supplémentaires, pièces sans écriture, montants en devise
+|`non-repris.csv` |imputations analytiques non représentables, données d'un module inactif (analytique, stock, suivi), pièces supplémentaires, pièces sans écriture, montants en devise
 |===
 
 Rapport et messages sont dans la langue choisie par `--locale` (`fr`, `en`,
@@ -190,6 +191,32 @@ de passe.
 * Lettrages par `match_lines`, un par compte et code de lettrage (partiel si
   débit ≠ crédit ; un code réutilisé d'un compte auxiliaire à l'autre forme
   un lettrage par tiers).
+* Analytique (base NOALYSS, module `ANALYTIC` actif) : plans, groupes,
+  postes (état compris), ventilation des lignes d'écriture
+  (`distribute_entry` ; un rang commun aux plans et de même montant donne
+  une ligne à un poste par plan) et opérations diverses analytiques, *avant*
+  la clôture des périodes reprises. Une imputation de sens contraire à sa
+  ligne, ou dont un plan dépasse le montant de la ligne, n'est pas
+  représentable : la ligne va en annexe. Réconciliation par poste : les
+  imputations reprises face aux balances analytiques de l'instance, au
+  centime.
+* Numéros de relevé des journaux financiers (`jr_pj_number`, écrit aussi
+  par le rapprochement de NOALYSS) : les opérations d'un même numéro
+  forment un relevé rapproché (`reconcile`) ; la pièce reste la sienne.
+* Stock (module `STOCK` actif) : dépôts (le premier devient le dépôt par
+  défaut), articles suivis sous leur code stock, mouvements regroupés par
+  opération manuelle ou par opération comptable d'origine.
+* Prévisions : prévisions, catégories, éléments (formule, montant ; un
+  élément propre à une période y reçoit son montant).
+* Suivi (module `FOLLOWUP` actif) : types (par préfixe), étiquettes,
+  actions (fiche, contact, fiches concernées, priorité, état, rappel, heure
+  normalisée), commentaires (date et auteur d'origine en tête), actions
+  liées ; la référence d'une action change (consignée).
+* Restrictions de NOALYSS non reproduites, en avertissement au rapport
+  (BLOCAGES B-SEC-001 du cœur) : droits par dépôt (`profile_sec_repository`)
+  et actions réservées à un groupe de profils (`ag_dest`). Les profils de
+  NOALYSS n'étant pas repris, ces restrictions se reposent sur l'instance.
+* Module inactif sur l'instance : ses données vont en annexe, avec une note.
 * Relu mais non repris, et signalé au rapport : montants en devise
   (`Montantdevise`/`Idevise`, `operation_currency`), dates de lettrage et de
   pièce.

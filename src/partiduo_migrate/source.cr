@@ -116,7 +116,7 @@ module PartiduoMigrate
       id : Int64 = 0_i64
 
     # Période d'un exercice de la source (base d'origine : `parm_periode`).
-    record Period, starts_on : Time, ends_on : Time, closed : Bool = false do
+    record Period, starts_on : Time, ends_on : Time, closed : Bool = false, id : Int64 = 0_i64 do
       def single_day? : Bool
         starts_on == ends_on
       end
@@ -205,10 +205,113 @@ module PartiduoMigrate
       end
     end
 
-    # Donnée que la source porte mais que l'outil ne reprend pas (analytique
-    # tant que le module n'a pas de contrat, pièces supplémentaires…),
-    # consignée au rapport et en annexe CSV.
+    # Donnée que la source porte mais que l'outil ne reprend pas (pièces
+    # supplémentaires, analytique d'une instance sans module Analytique ou
+    # que l'instance ne peut pas représenter…), consignée au rapport et en
+    # annexe CSV.
     record Unported, kind : String, reference : String, detail : String
+
+    # --- Analytique (base d'origine : plan_analytique, groupe_analytique,
+    # poste_analytique, operation_analytique ; DECISIONS D-R5-011) ---------
+
+    record AnalyticPlan, name : String, description : String
+    record AnalyticGroup, plan : String, code : String, description : String
+    record AnalyticPost, plan : String, code : String, description : String, group : String? = nil, active : Bool = true
+
+    # Imputation : ligne d'écriture (`line_row` = `jrnx.j_id`) ou opération
+    # diverse (`line_row` nil, regroupée par `group`) ; `row` : rang de la
+    # ligne de ventilation (`oa_row`, commun aux plans) ; `debit` : sens.
+    record AnalyticRow,
+      plan : String,
+      post : String,
+      amount : BigDecimal,
+      debit : Bool,
+      date : Time,
+      line_row : Int64?,
+      row : Int32,
+      group : Int64,
+      description : String,
+      card : String? = nil
+
+    class Analytic
+      getter plans = [] of AnalyticPlan
+      getter groups = [] of AnalyticGroup
+      getter posts = [] of AnalyticPost
+      getter rows = [] of AnalyticRow
+
+      def empty? : Bool
+        plans.empty?
+      end
+    end
+
+    # --- Stock (stock_repository, stock_goods, stock_change) ----------------
+
+    record Repository, id : Int64, name : String, address : String, city : String, country : String, phone : String
+
+    # Mouvement : dépôt, fiche article, quantité signée (entrée positive),
+    # date, commentaire, opération manuelle (`change`) ou écriture d'origine
+    # (`entry_origin`, `jrn.jr_id`).
+    record StockMovement, repository : Int64, card : String, quantity : BigDecimal, date : Time, comment : String,
+      change : Int64? = nil, entry_origin : Int64? = nil, change_comment : String = ""
+
+    class Stock
+      getter repositories = [] of Repository
+      # Code stock par quick code de fiche (attribut 19).
+      getter codes = {} of String => String
+      getter movements = [] of StockMovement
+      # Droits par dépôt de la source (`profile_sec_repository`) : nombre de lignes.
+      property repository_rights = 0
+
+      # Rien à reprendre : ni mouvement ni code stock, et au plus le dépôt
+      # par défaut que toute base d'origine porte.
+      def empty? : Bool
+        movements.empty? && codes.empty? && repositories.size <= 1
+      end
+    end
+
+    # --- Prévisions (forecast, forecast_category, forecast_item) ------------
+
+    record ForecastItem, label : String, formula : String, amount : BigDecimal, initial : BigDecimal,
+      position : Int32, period : Period? = nil
+    record ForecastCategory, label : String, position : Int32, items : Array(ForecastItem)
+    record Forecast, name : String, first : Period?, last : Period?, categories : Array(ForecastCategory)
+
+    # --- Suivi (action_gestion et tables liées) ------------------------------
+
+    record ActionType, id : Int64, label : String, prefix : String
+    record Tag, id : Int64, label : String, description : String, active : Bool, color : Int32
+    record ActionComment, date : Time, text : String, author : String
+
+    # Action : `state` du cœur (`todo`, `follow`, `closed`, `abandoned`) ;
+    # `restricted` : visibilité limitée à un groupe de profils dans la
+    # source (`ag_dest` ≠ -1), non reproduite (BLOCAGES B-SEC-001).
+    record Action,
+      id : Int64,
+      type : Int64,
+      reference : String,
+      title : String,
+      date : Time,
+      hour : String,
+      priority : Int32,
+      state : String,
+      remind_on : Time?,
+      card : String?,
+      contact : String?,
+      concerned : Array(String),
+      tags : Array(Int64),
+      comments : Array(ActionComment),
+      restricted : Bool = false
+
+    class Followup
+      getter types = [] of ActionType
+      getter tags = [] of Tag
+      getter actions = [] of Action
+      getter related = [] of {Int64, Int64}
+
+      def empty? : Bool
+        actions.empty?
+      end
+    end
 
     # Dossier complet.
     class Dataset
@@ -223,6 +326,10 @@ module PartiduoMigrate
       getter vat_rates = [] of VatRate
       getter fiscal_years = [] of FiscalYear
       getter unported = [] of Unported
+      getter analytic = Analytic.new
+      getter stock = Stock.new
+      getter forecasts = [] of Forecast
+      getter followup = Followup.new
       # Nom du fichier FEC (date de clôture `…FECAAAAMMJJ`).
       property file_name : String? = nil
       # Toute la base d'origine (plan complet) plutôt que le seul FEC.
