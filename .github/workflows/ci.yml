@@ -69,6 +69,8 @@ jobs:
         run: |
           sudo fallocate -l 12G /swap-ci && sudo chmod 600 /swap-ci
           sudo mkswap /swap-ci && sudo swapon /swap-ci && free -h
+      - name: Index des paquets à jour (install-crystal installe sans le rafraîchir)
+        run: sudo apt-get update
       - uses: crystal-lang/install-crystal@v1
         with:
           crystal: 1.19.1
